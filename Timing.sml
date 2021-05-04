@@ -1,63 +1,64 @@
-signature TIMING =
-sig
+infixr $
+fun f $ x = f x
+signature TIMING = sig
+type day = int
+datatype month = Jan | Feb | Mar | Apr 
+               | May | Jun | Jul | Aug 
+               | Sep | Oct | Nov | Dec
+type year = int
+type date
 
-    type day = int
-    datatype month = Jan | Feb | Mar | Apr | May | Jun 
-                   | Jul | Aug | Sep | Oct | Nov | Dec
-    type year = int
-    type date
+exception Invalid
 
-    exception Invalid
+val year : date -> year
+val month : date -> month
+val day : date -> day
 
-    val year : date -> year
-    val month : date -> month
-    val day : date -> day
+val date : year * month * day -> date
+val fromEightDigit : string -> date
 
-    val date : year * month * day -> date
-    val fromEightDigit : string -> date
+val dateToString : date -> string
+val eightDigit : date -> string
+val compare : date * date -> order
 
-    val dateToString : date -> string
-    val eightDigit : date -> string
-    val compare : date * date -> order
-
-    val century : year -> string
-    val leapYear : year -> bool
+val century : year -> string
+val leapYear : year -> bool
  
 
-    type timezone
-    type offset
+type timezone
+type offset
 
-    val offsetCmpZero : offset -> order
+val offsetCmpZero : offset -> order
 
-    val hourMin : int * int -> offset
-    val UTCPlus : int * int-> timezone
-    val UTCMinus : int * int -> timezone
-    val Local : timezone
+val hourMin : int * int -> offset
+val UTCPlus : int * int-> timezone
+val UTCMinus : int * int -> timezone
+val Local : timezone
 
-    val intToMonth : int -> month
-    val monthToInt : month -> int
-    val monthToString : month -> string
+val intToMonth : int -> month
+val monthToInt : month -> int
+val monthToString : month -> string
    
-    val monthSucc : month -> month
-    val monthPred : month -> month
-    val yearSucc : year -> year
-    val yearPred : year -> year
-    val dateSucc : date -> date
-    val datePred : date -> date
+val monthSucc : month -> month
+val monthPred : month -> month
+val yearSucc : year -> year
+val yearPred : year -> year
+val dateSucc : date -> date
+val datePred : date -> date
 
-    val numDays : month * year -> int
-    val monthCmp : month * month -> order
+val numDays : month * year -> int
+val monthCmp : month * month -> order
 
-    val diff : date * date -> int
+val diff : date * date -> int
 
-    datatype weekday = Sunday | Monday | Tuesday | Wednesday
-                 | Thursday | Friday | Saturday
+datatype weekday = Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday
 
-    val weekdaySucc : weekday -> weekday
-    val weekdayPred : weekday -> weekday
 
-    val dayOfWeek : timezone -> weekday
-    val today : timezone -> date
+val weekdaySucc : weekday -> weekday
+val weekdayPred : weekday -> weekday
+
+val dayOfWeek : timezone -> weekday
+val today : timezone -> date
     
 
     type time
@@ -93,59 +94,62 @@ sig
     val Seconds : int -> duration
     val CentiSeconds : int -> duration
     val durPlus : duration * duration -> duration
+    val durToString : duration -> string
 
-    val silentCountdown : duration -> unit
+    val wait : duration -> (unit -> 'a) -> 'a
+    val timeIterate : ('a ref -> (unit -> 'b) -> (unit -> 'b) -> 'b) 
+                    -> 'a 
+                    -> duration 
+                    -> (unit -> 'b)
+                    -> 'b
     val intervalCountdown : duration -> duration -> unit
     val stopwatch : duration -> unit
-  
 end
-
-
-infixr $
-fun f $ x = f x
-
 structure Timing :> TIMING=
 struct
-   type day = int
-   datatype month = Jan | Feb | Mar | Apr | May | Jun 
-                  | Jul | Aug | Sep | Oct | Nov | Dec
-   type year = int
-   type date = year * month * day
+   
+type day = int
+datatype month = Jan | Feb | Mar | Apr 
+               | May | Jun | Jul | Aug 
+               | Sep | Oct | Nov | Dec
+type year = int
+type date = year * month * day
 
-   exception Invalid
+exception Invalid
 
-   val year = fn (YY,_,_) => YY
-   val month = fn (_,MM,_) => MM
-   val day = fn (_,_,DD) => DD
+val year = fn (YY,_,_) => YY
+val month = fn (_,MM,_) => MM
+val day = fn (_,_,DD) => DD
 
-   fun leapYear YY = ((YY mod 4 = 0) andalso (YY mod 100 <> 0))
-                                     orelse
-                                (YY mod 400 = 0)
+fun leapYear YY = 
+((YY mod 4 = 0) andalso (YY mod 100 <> 0))
+    orelse
+(YY mod 400 = 0)
 
-   fun numDays (MM,YY) =
-     case MM of
-        Jan => 31
-      | Feb=>if (leapYear YY) then 29 else 28
-      | Mar=>31
-      | Apr=>30
-      | May=>31
-      | Jun=>30
-      | Jul=>31
-      | Aug=>31
-      | Sep=>30
-      | Oct=>31
-      | Nov=>30
-      | Dec=>31
-
+fun numDays (MM,YY) =
+    case MM of
+      Sep => 30
+    | Apr => 30 | Jun => 30 | Nov => 30
     
+    | Jan => 31 | Mar => 31 | May => 31
+    | Jul => 31 | Aug => 31 | Oct => 31
+    | Dec => 31
 
-    fun date (YY,MM,DD) = 
-       let
-         val _ = (YY <> 0) orelse raise Invalid
-         val _ = ((0 < DD) andalso (DD <= (numDays (MM,YY)))) orelse raise Invalid
-       in
-         (YY,MM,DD)
-       end
+    | Feb=> if (leapYear YY) 
+            then 29 
+            else 28
+
+fun date (YY,MM,DD):date = 
+  let
+    val _ = (YY <> 0) orelse raise Invalid
+    val _ = (
+                (0 < DD) andalso 
+                (DD <= (numDays (MM,YY)))
+            ) 
+            orelse raise Invalid
+  in
+    (YY,MM,DD)
+  end
 
     fun intToMonth n =
       case n of
@@ -163,30 +167,40 @@ struct
          | Aug => "August" | Sep => "September" | Oct => "October" 
          | Nov => "November" | Dec => "December"
 
-    fun monthSucc MM = 
-      case MM of Jan => Feb | Feb => Mar | Mar => Apr | Apr => May | May => Jun
-         | Jun => Jul | Jul => Aug | Aug => Sep | Sep => Oct | Oct => Nov 
-         | Nov => Dec | Dec => Jan
-    fun yearSucc ~1 = 1
-      | yearSucc n = n+1
+fun monthSucc MM = 
+  case MM of 
+    Jan => Feb | Feb => Mar | Mar => Apr 
+  | Apr => May | May => Jun | Jun => Jul 
+  | Jul => Aug | Aug => Sep | Sep => Oct 
+  | Oct => Nov | Nov => Dec | Dec => Jan
+fun monthPred MM = 
+  case MM of 
+    Jan => Dec | Feb => Jan | Mar => Feb 
+  | Apr => Mar | May => Apr | Jun => May 
+  | Jul => Jun | Aug => Jul | Sep => Aug 
+  | Oct => Sep | Nov => Oct | Dec => Nov
 
-    fun monthPred MM = 
-      case MM of Jan => Dec | Feb => Jan | Mar => Feb | Apr => Mar | May => Apr
-         | Jun => May | Jul => Jun | Aug => Jul | Sep => Aug | Oct => Sep 
-         | Nov => Oct | Dec => Nov
+   
+fun yearSucc ~1 = 1
+  | yearSucc n = n+1
 
     fun yearPred 1 = ~1
       | yearPred n = n-1
 
-    fun dateSucc (YY,Dec,31) = (yearSucc YY,Jan,1)
-      | dateSucc (YY,MM,DD) = if DD = (numDays (MM,YY))
-                              then (YY,monthSucc MM,1)
-                              else (YY,MM,DD+1)
-
-    fun datePred (YY,Jan,1) = (yearPred YY,Dec,31)
-      | datePred (YY,MM,DD) = if DD = 1
-                              then (YY,monthPred MM, numDays(monthPred MM,YY))
-                              else (YY,MM,DD-1)
+(* datePred : date -> date *)
+fun datePred (YY,Jan,1) =
+        (yearPred YY,Dec,31)
+  | datePred (YY,MM,1) = 
+        (YY, monthPred MM, 
+         numDays(monthPred MM,YY))
+  | datePred (YY,MM,DD) = (YY,MM,DD-1)
+(* dateSucc : date -> date *)
+fun dateSucc (YY,Dec,31) = 
+        (yearSucc YY,Jan,1)
+  | dateSucc (YY,MM,DD) = 
+        if DD = (numDays (MM,YY))
+        then (YY,monthSucc MM,1)
+        else (YY,MM,DD+1)
 
 
 
@@ -315,18 +329,18 @@ struct
           | fromSMLMonth Date.Nov = Nov
           | fromSMLMonth Date.Dec = Dec
  
-    datatype weekday = Sunday | Monday | Tuesday | Wednesday
-                 | Thursday | Friday | Saturday
+datatype weekday = Sunday | Monday | Tuesday | Wednesday | Thursday | Friday | Saturday
+fun weekdaySucc W = case W of
+    Sunday => Monday 
+  | Monday => Tuesday 
+  | Tuesday =>  Wednesday 
+  | Wednesday => Thursday 
+  | Thursday => Friday 
+  | Friday => Saturday 
+  | Saturday => Sunday
 
-    fun weekdaySucc W = case W of
-        Sunday => Monday | Monday => Tuesday | Tuesday =>  Wednesday
-      | Wednesday => Thursday | Thursday => Friday | Friday => Saturday
-      | Saturday => Sunday
-
-    fun weekdayPred W = case W of
-        Sunday => Saturday | Monday => Sunday | Tuesday =>  Monday
-      | Wednesday => Tuesday | Thursday => Wednesday | Friday => Thursday
-      | Saturday => Friday
+fun weekdayPred W = case W of
+    Sunday => Saturday | Monday => Sunday | Tuesday => Monday | Wednesday => Tuesday | Thursday => Wednesday | Friday => Thursday | Saturday => Friday
 
     type time = date * int * int * int
     type point = time * timezone
@@ -456,64 +470,74 @@ struct
     fun Seconds n = if n<0 then raise Negative else n*100
     fun CentiSeconds n = if n<0 then raise Negative else n
     val durPlus = op +
-    
+    fun durToString n = 
+      case (n>=6000, n mod 100) of
+        (true,_) => (Int.toString(n div 6000)) ^ " minutes, " ^ durToString(n mod 6000)
+      | (_,0) => (Int.toString(n div 100)) ^ " seconds"
+      | (_,r) => (Int.toString(n div 100)) ^ "." 
+                 ^ (zeroPad(Int.toString r,2)) ^ " seconds"
+
     fun finish () = ignore(
       SMLofNJ.IntervalTimer.setIntTimer NONE;
       Signals.setHandler (Signals.sigALRM, Signals.IGNORE))
     fun finally f final =
       f () before ignore (final ())
       handle e => (final (); raise e)
+    val timer = SMLofNJ.IntervalTimer.setIntTimer
 
-
-    fun wait 0 = () 
-      | wait n =
-        let
-          val t = Time.fromMilliseconds (IntInf.fromInt (10*n))
-          val timer = SMLofNJ.IntervalTimer.setIntTimer
-          fun doit k =
-            let
-              fun handler _ = k
-              val _ = Signals.setHandler (Signals.sigALRM,
+    fun wait 0 sk = sk ()
+      | wait D sk=
+          let 
+            val t = Time.fromMilliseconds (IntInf.fromInt (10*D))
+            fun doit k =
+              let 
+                fun handler _ = k
+                val _ = Signals.setHandler (Signals.sigALRM,
                                               Signals.HANDLER handler)
-              val _ = SMLofNJ.IntervalTimer.setIntTimer (SOME t)
-              fun loop () = loop ()
-            in 
-              loop ()
-            end
-          val () = finally (fn () => SMLofNJ.Cont.callcc doit) finish
-      in () end
+                val () = timer (SOME t)
+              in 
+                Signals.pause() 
+              end
+              val _ = finally (fn () => SMLofNJ.Cont.callcc doit) finish
+          in 
+            sk() 
+          end
+ 
 
-    fun silentCountdown n = (wait n; print "Done!\n")
-    fun intervalCountdown inter n =
+    fun timeIterate step init inter done =
       let
-        val _ = (inter>0) orelse raise Fail "Zero-length interval supplied!"
-        fun step r =
-          if r<inter
-          then (wait r;print("Done!\n"))
-          else 
-            (print ((Int.toString(r div 100)) ^ "." ^ 
-                    (Int.toString(r mod 100)) ^ " seconds remaining!\n");
-             wait inter;
-             step (r-inter))
-       in
-         if n>inter 
-         then (wait (n mod inter);step(n-(n mod inter)))
-         else step n
-       end
-    fun stopwatch inter =
-      let
-        val _ = (inter>0) orelse raise Fail "Zero-length interval supplied!"
-        fun loop acc =
-          ( print ((Int.toString(acc div 100)) ^ "." 
-                   ^ (Int.toString(acc mod 100)) ^ " -- ");
-            wait inter;
-            loop (acc+inter)
-          )
+        val counter = ref init
+        fun loop k = step counter (fn () => wait inter (fn () => loop k)) k
       in
-        loop 0
+        loop done
+      end
+
+    (* REQ: inter>0 *)
+    fun intervalCountdown inter length = 
+      let
+        fun step counter continue kill = 
+          case !counter of
+            0 => kill()
+          | r => (print ((durToString r) ^ " remaining!\n"); 
+                  counter:=r-inter;
+                  continue())
+        val leftover = length mod inter
+      in
+        wait leftover (fn () => 
+        timeIterate step (length-leftover) inter (fn () => print "Done!\n"))
+      end
+
+
+    fun stopwatch inter = 
+      let
+        fun step counter continue _ = (
+          print ((durToString (!counter)) ^ " elapsed!\n"); 
+          counter:=(!counter)+inter;
+          continue())
+      in
+        timeIterate step 0 inter (fn () => raise Fail "Should not reach this point")
       end
 end
-
 (*
 fun datePrettyPrint pps D = PrettyPrint.string pps (Timing.dateToString D)
 
