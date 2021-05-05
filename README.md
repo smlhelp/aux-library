@@ -6,4 +6,4 @@ This repository contains an auxiliary library for Standard ML, meant as a supple
 ## Modules List
 - `Timing`: Provide common utilites relating to date, time, and timing. _datatypes, higher-order functions, order_
 - `Language`: Various combinators for `string -> bool` functions. _higher-order functions_
-- `Regexp`: Regular expression matcher. _datatypes,continuation passing style, exceptions_
+- `Regexp`: Regular expression matcher. _datatypes, equality types, continuation passing style, exceptions_
