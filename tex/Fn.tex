@@ -1,0 +1,41 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{mainColor}{HTML}{398097}
+    \definecolor{auxColor}{HTML}{666666}
+    \definecolor{brightColor}{HTML}{eeeeee}
+
+\title{Fn Module}
+\date{June 2021}
+
+\author{Jacob Neumann}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle[SMLNJ Basis Documentation]
+
+\vspace{-12pt}
+\tableofcontents
+
+This documentation covers the behavior of the \code{Fn} module -- part of the SMLNJ Basis -- as it appears in SMLNJ v110.99. Other versions of SMLNJ may have slightly different versions of \code{Fn}. All the values and types below are used as if the \code{Fn} structure has been opened. If this is not the case, then they must be prefaced with \code{Fn.} -- except for \code{op o}.
+
+\section{Specification}
+
+\spec{id}{'a -> 'a}{true}{$\code{id x}\eeq\code{x}$}
+\spec{const}{'a -> 'b -> 'a}{true}{\code{const x} is the function which evaluates to \code x on every input. \\ I.e. $\code{const x y}\eeq\code{x}$ for all values \code{y}.}
+\spec{apply}{('a -> 'b) * 'a -> 'b}{true}{$\code{apply(f,x)}\eeq\code{f(x)}$}
+\spec{(op o)}{('b -> 'c)*('a -> 'b) -> 'a -> 'c}{true}{$\code{(g o f)(x)}\eeq\code{g(f(x))}$}
+\clearpage\spec{curry}{('a * 'b -> 'c) -> 'a -> 'b -> 'c}{true}{$\code{(curry f) x y}\eeq\code{f(x,y)}$}
+\spec{uncurry}{('a -> 'b -> 'c) -> 'a * 'b -> 'c}{true}{$\code{(uncurry g)(x,y)}\eeq\code{g x y}$}
+\spec{flip}{('b * 'a -> 'c) -> 'a * 'b -> 'c}{true}{$\code{(flip f)(x,y)}\eeq\code{f(y,x)}$}
+\spec{repeat}{int -> ('a -> 'a) -> 'a -> 'a}{$\code n\geq\code0$}{\code{repeat n h x} evaluates to the result of applying \code h to \code x, \code n times.\\
+For instance, $\code{repeat 0 h x}\eeq\code x$ and $\code{repeat 3 h x}\eeq\code{h(h(h(x)))}$}
+\spec{equal}{''a -> ''a -> bool}{true}{$\code{equal}\eeq\code{curry op=}$}
+\spec{notEqual}{''a -> ''a -> bool}{true}{$\code{notEqual}\eeq\code{curry op<>}$}
+\end{document}
+
