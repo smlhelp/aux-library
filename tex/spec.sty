@@ -28,7 +28,7 @@
 \textwidth16.5cm
 \textheight23.5cm
 \setlength{\parindent}{20pt}
-\setlength{\parskip}{5pt plus 1pt}
+\setlength{\parskip}{6pt}
 
 \pagestyle{fancyplain}
 
@@ -41,11 +41,11 @@
 \makeatother
 
 \titleformat{\section}{\color{mainColor}\Large\bfseries}{\thesection}{1em}{}
-\titleformat{\subsection}{\color{auxColor}\Large\bfseries}{\thesubsection}{1em}{}
+\titleformat{\subsection}{\color{mainColor}\large\bfseries}{\thesubsection}{1em}{}
 
 \makeatletter
 
-\renewcommand{\maketitle}{%
+\renewcommand{\maketitle}[1][\href{https://github.com/smlhelp/aux-library}{Auxiliary Library}]{%
     \begin{tikzpicture}[remember picture,overlay]
 
         \fill[mainColor] ([xshift=0.25cm,yshift=-1cm]current page.north west) -- ([xshift=1.25cm,yshift=-1cm]current page.north west) -- ([xshift=3.25cm,yshift=-3.76cm]current page.north west) -- ([xshift=2.25cm,yshift=-3.76cm]current page.north west) -- ([xshift=0.25cm,yshift=-1cm]current page.north west);
@@ -56,7 +56,7 @@
         \node[anchor=west]%
             at ([yshift=-1.1cm,xshift=3.1cm]current page.north west) {\Large \textbf{\@title}};
         \node[anchor=west]%
-            at ([yshift=-1.7cm,xshift=3.1cm]current page.north west) {\large 15-150 Principles of Functional Programming};
+            at ([yshift=-1.7cm,xshift=3.1cm]current page.north west) {\large \href{https://smlhelp.github.io/book/}{\texttt{smlhelp.github.io}} -- #1};
         \node[anchor=west]%
             at ([yshift=-2.5cm,xshift=3.1cm]current page.north west) {\large \@author};
         \node[anchor=west]%
@@ -95,39 +95,68 @@
 % graphics
 \RequirePackage{graphicx}
 
-% Extensional equivalence symbol
-\newcommand{\eeq}{\cong}
-
 %%%%%%%%%%%%%%%%%%%%%%%%
 %% Code Specification %%
 %%%%%%%%%%%%%%%%%%%%%%%%
 % spec
 \newrobustcmd{\spec}[4]{
     \begin{mdframed}[backgroundcolor=brightColor,
-         linecolor=auxColor,
-          linewidth=4pt,
-          topline=false,
-            rightline=false,
-         bottomline=false]
-         \hspace{-20pt}\mainBox{\bfseries\strut \;Specification:\ \texttt{#1}\hspace{20pt}}
+        linecolor=mainColor,
+        innertopmargin=0pt,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false]
+         \hspace{-14pt}\mainBox{\bfseries\strut \;Value Spec\;}
     \par\noindent\code{#1 : #2}
-    \ifstrempty{#3}{}{\par\noindent REQUIRES: #3}
-    \ifstrempty{#4}{}{\par\noindent ENSURES: #4}
+        \ifstrempty{#3}{}{\par\noindent {\bfseries\color{mainColor}REQUIRES:} #3}
+        \ifstrempty{#4}{}{\par\noindent {\bfseries\color{mainColor}ENSURES:} #4}
+    \end{mdframed}
+}
+\newrobustcmd{\specWS}[6]{
+    \begin{mdframed}[backgroundcolor=brightColor,
+        linecolor=mainColor,
+        innertopmargin=0pt,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false]
+         \hspace{-14pt}\mainBox{\bfseries\strut \;Value Spec\;}
+    \par\noindent\code{#1 : #2}
+        \ifstrempty{#3}{}{\par\noindent {\bfseries\color{mainColor}REQUIRES:} #3}
+        \ifstrempty{#4}{}{\par\noindent {\bfseries\color{mainColor}ENSURES:} #4}
+        \ifstrempty{#5}{}{\par\noindent {\bfseries\color{mainColor}WORK:} #5}
+        \ifstrempty{#6}{}{\par\noindent {\bfseries\color{mainColor}SPAN:} #6}
     \end{mdframed}
 }
 \newrobustcmd{\Spec}[4]{
     \begin{mdframed}[backgroundcolor=brightColor,
-         linecolor=auxColor,
+         linecolor=mainColor,
+         innertopmargin=0pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]
-         \hspace{-20pt}\mainBox{\bfseries\strut \;Specification:\ \texttt{#1}\hspace{20pt}}
+         \hspace{-14pt}\mainBox{\bfseries\strut \;Value Spec\;}
     \begin{flalign*}
         \code{#1} &: #2 &&
     \end{flalign*}
-    \ifstrempty{#3}{}{\par\noindent REQUIRES: #3}
-    \ifstrempty{#4}{}{\par\noindent ENSURES: #4}
+        \ifstrempty{#3}{}{\par\noindent {\bfseries\color{mainColor}REQUIRES:} #3}
+        \ifstrempty{#4}{}{\par\noindent {\bfseries\color{mainColor}ENSURES:} #4}
+    \end{mdframed}
+}
+\newrobustcmd{\TypeSpec}[3]{
+    \begin{mdframed}[backgroundcolor=brightColor,
+         linecolor=mainColor,
+         innertopmargin=0pt,
+          linewidth=4pt,
+          topline=false,
+            rightline=false,
+         bottomline=false]
+         \hspace{-14pt}\mainBox{\bfseries\strut \;Type Spec\;}
+        \par\noindent\code{#1}
+        \ifstrempty{#2}{}{\par\noindent {\bfseries\color{mainColor}INVARIANT:} #2}
+        \ifstrempty{#3}{}{\par\indent #3}
     \end{mdframed}
 }
 
@@ -140,21 +169,9 @@
 \newrobustcmd{\stepsTo}{\Longrightarrow}
 \newrobustcmd{\stepsToIn}[1]{\Longrightarrow^{#1}}
 \newrobustcmd{\evalsTo}{\hookrightarrow}
+\newcommand{\eeq}{\cong}
 
-\newrobustcmd{\W}[2][]{W_{\code{#1}}\left( #2 \right)}
-\renewrobustcmd{\S}[2][]{S_{\code{#1}}\left( #2 \right)}
 
-\renewrobustcmd{\O}[1]{O\left(#1\right)}
-
-\newcommand{\lectureEnd}[1]{%
-    \begin{center}%
-        \colorbox{red}{%
-        \parbox{6cm}{%
-            {\color{white}\begin{center} Lecture ended here on #1. Anything past here will be covered in a future lecture or lab\end{center}}%
-        }%
-    }%
-    \end{center}%
-}
 
 %%%%%%
 %% Macros
@@ -248,7 +265,7 @@
         }
     
 \newcommand{\auxLib}[4][white]{\par%
-    {\hspace{-3pt}\colorbox{auxColor}{%
+    {\hspace{-20pt}\colorbox{auxColor}{%
         {\color{#1}%
             \ aux-library: #2\ %
         }%
@@ -262,12 +279,16 @@
 % Boxes
 \newcommand{\auxBox}[2][white]{\noindent\colorbox{auxColor}{{\color{#1}\bfseries #2}}}
 \newcommand{\mainBox}[2][white]{\noindent\colorbox{mainColor}{{\color{#1}\bfseries #2}}}
+\newcommand{\bcBox}[1][]{\par\auxBox{BC#1}\ }
+\newcommand{\ihBox}[1][]{\par\auxBox{IH#1}\ }
+\newcommand{\refIH}[1][]{\auxBox{IH#1}}
+\newcommand{\isBox}[1][]{\par\auxBox{IS#1}\ }
 
 % Spec-proving macros
 \definecolor{satGreen}{HTML}{33aa33}
-\newcommand{\specSat}[1][satGreen]{
-    \noindent\colorbox{#1}{%
-        {\color{white}\bfseries Spec satisfied!}%
+\newcommand{\specSat}[1][]{
+    \noindent\colorbox{satGreen}{%
+        {\color{white}\bfseries \texttt{#1} Spec Satisfied!}%
     }\;%
 }
 
@@ -286,68 +307,100 @@
 \definecolor{emph_color}    {RGB}{ 0,  112,  36}
 \newcommand{\Step}[1]{\colorbox{emph_color}{\color{white}\textsf{#1}}} 
 
-
+\usepackage{aliascnt}
 % Theorem referencing
 \theoremstyle{break}
 %\theoremindent20pt
-\theoremheaderfont{\normalfont\bfseries\color{white}\hspace{-20pt}\mainBox{\strut\hspace{5cm}}\vspace{0.2cm}\hspace{-5cm}}
+\theoremheaderfont{\normalfont\bfseries\color{white}\hspace{-14pt}\mainBox{\strut\hspace{7cm}}\vspace{0.2cm}\hspace{-7cm}}
 
 \theorembodyfont{\upshape}
 \newtheorem{pg}{}
 \newtheorem{theorem}{Thm.}
-\newtheorem{proposition}[theorem]{Prop}
-\newtheorem{lemma}[theorem]{Lemma}
-\newtheorem{corollary}[theorem]{Cor.}
-\newtheorem{claim}[theorem]{Claim}
-\newtheorem{example}{Example}
-\newtheorem{definition}{Defn.}
+
+\newaliascnt{proposition}{theorem}
+\newaliascnt{lemma}{theorem}
+\newaliascnt{corollary}{theorem}
+\newaliascnt{claim}{theorem}
+\newaliascnt{example}{theorem}
+\newaliascnt{definition}{theorem}
+\newaliascnt{fact}{theorem}
+
+\newtheorem{proposition}[proposition]{Prop}
+\aliascntresetthe{proposition}
+\newtheorem{lemma}[lemma]{Lemma}
+\aliascntresetthe{lemma}
+\newtheorem{corollary}[corollary]{Cor.}
+\aliascntresetthe{corollary}
+\newtheorem{claim}[claim]{Claim}
+\aliascntresetthe{claim}
+\newtheorem{example}[example]{Example}
+\aliascntresetthe{example}
+\newtheorem{definition}[definition]{Defn.}
+\aliascntresetthe{definition}
+\newtheorem{fact}[fact]{Fact}
+\aliascntresetthe{fact}
 
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{theorem}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{proposition}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{lemma}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{corollary}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{claim}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{example}
      \surroundwithmdframed[
          linecolor=auxColor,
+         innertopmargin=-1pt,
           linewidth=4pt,
           topline=false,
             rightline=false,
          bottomline=false]{definition}
+     \surroundwithmdframed[
+         linecolor=auxColor,
+         innertopmargin=-1pt,
+          linewidth=4pt,
+          topline=false,
+            rightline=false,
+         bottomline=false]{fact}
 \providecommand*{\theoremautorefname}{Thm.}
 \providecommand*{\definitionautorefname}{Defn.}
 \providecommand*{\propositionautorefname}{Prop.}
-\providecommand*{\lemmaautorefname}{Lemma}
+\def\lemmaautorefname{Lemma}
 \providecommand*{\corollaryautorefname}{Cor.}
 \providecommand*{\claimautorefname}{Claim}
 \providecommand*{\exampleautorefname}{Example}
+\providecommand*{\factautorefname}{Fact}

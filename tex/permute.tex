@@ -1,0 +1,212 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{mainColor}{HTML}{973951}
+    \definecolor{auxColor}{HTML}{2b6072}
+    \definecolor{brightColor}{HTML}{e3f0f4}
+
+\title{Permutation Module}
+\date{June 2021}
+
+\author{Jacob Neumann}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\section{Definitions}
+
+\begin{definition}[Comparison Function]
+    For any type \code{t}, a value \code{cmp : t * t -> order} is a \keyword{comparison function} if it satisfies the usual properties that we expect from a function which consistently compares elements of type \code{t}:
+    \begin{enumerate}
+        \item \code{cmp} is total
+        \item \textbf{Reflexivity of \code{cmp}-equality:} For all \code{x:t}, $\code{cmp(x,x)}\eeq\code{EQUAL}$
+        \item \textbf{Symmetry of \code{cmp}-equality:} For all \code{x,y:t}, if $\code{cmp(x,y)}\eeq\code{EQUAL}$, then $\code{cmp(y,z)}\eeq\code{EQUAL}$
+        \item \textbf{Transitivity of \code{cmp}-equality:} For all \code{x,y,z:t}, if $\code{cmp(x,y)}\eeq\code{EQUAL}$ and $\code{cmp(y,z)}\eeq\code{EQUAL}$, then $\code{cmp(x,z)}\eeq\code{EQUAL}$
+        \item % TODO: Finish 
+    \end{enumerate}
+\end{definition}
+
+\begin{definition}[Length]
+    \begin{itemize}
+        \item The \keyword{length} of \code{[]} is 0
+        \item The length of \code{x::xs} is 1 plus the length of \code{xs}
+    \end{itemize}
+\end{definition}
+
+\begin{definition}[List Membership]
+    For any type \code{t} and any comparison function \code{cmp : t ord}, a value \code{y : t} is \keyword{in} a list \code{L : t list} if \code{L = x::xs} where either
+    \begin{itemize}
+        \item $\code{cmp(x,y)}\eeq\code{EQUAL}$, or
+        \item \code{y} is in \code{xs}.
+    \end{itemize}
+    We may denote this with $\code y \in \code{L}$ or $\code y \in_{\code{cmp}} \code{L}$.
+\end{definition}
+
+\begin{definition}[Permutation]
+    Define the \code{count} function as follows:
+    \begin{codeblock}
+    fun count cmp (y,[]) = 0
+      | count cmp (y,x::xs) = 
+          case (cmp(x,y)) of
+            EQUAL => 1 + (count cmp (y,xs))
+          | _ => count cmp (y,xs)
+    \end{codeblock}
+    Given a type \code{t}, a comparison function \code{cmp : t * t -> order}, and two lists \code{L1,L2 : t list}, we say that \code{L1} is a \keyword{permutation} of \code{L2} (with respect to \code{cmp}) if
+    \begin{align*}
+        \code{count cmp (x,L1)} \quad\eeq\quad \code{count cmp (x,L2)} \tag*{for all values \code{x:t}.}
+    \end{align*}
+    We omit mention of \code{cmp} if one is clear from context.\footnote{E.g. \code{Int.compare} when deciding whether one \code{int list} is a permutation of another.}
+\end{definition}
+
+\begin{definition}[Permutation Function]
+    A function \code{f : t list -> t list} is said to be a \keyword{permutation function} if \code{f} is total and for all values \code{L : t list}, the list \code{f(L)} is a permutation of \code{L}.
+\end{definition}
+
+\begin{definition}[Splitting Function]
+    A function \code{s : t list -> t list * t list} is said to be a \keyword{splitting function} if it is total and
+    \begin{align*}
+        \code{op@(s(L))}\text{ is a permutation of }\code{L} \tag*{for all values \code{L:t list}.}
+    \end{align*}
+    Or, in other words, if $\code{A@B}$ is a permutation of \code{L}, where \code{(A,B)=s(L)}.
+\end{definition}
+
+\begin{definition}[Merging Function]
+    A function \code{m : t list * t list -> t list} is said to be a \keyword{merging function} if it is total and
+    \begin{align*}
+        \code{m(A,B)}\text{ is a permutation of }\code{A@B} \tag*{for all values \code{A,B:t list}.}
+    \end{align*}
+\end{definition}
+
+\begin{definition}[Sorted]
+    A value \code{L : t list} is \keyword{sorted} (with respect to \code{cmp : t ord}) if either:
+    \begin{itemize}
+        \item \code{L = []}
+        \item \code{L = [x]} for some \code{x}
+        \item \code{L = x::x'::xs} for some \code{x,x',xs} such that 
+            \begin{itemize}
+                \item $\code{cmp(x,x')}$ evaluates to either \code{LESS} or \code{EQUAL}
+                \item \code{x'::xs} is sorted (with respect to \code{cmp})
+            \end{itemize}
+    \end{itemize}
+\end{definition}
+
+\section{Specification}
+\subsection{Types}
+
+\TypeSpec{type 'a ord = 'a * 'a -> order}{Any value \code{cmp : t ord} is a comparison function}{}
+\TypeSpec{type 'a perm = 'a list -> 'a list}{Any value \code{f : t perm} is a permutation function}{}
+\TypeSpec{type 'a splitter = 'a -> 'a list * 'a list}{Any value \code{s : 'a ord} is a splitting function}{}
+\TypeSpec{type 'a merger = 'a list * 'a list -> 'a list}{Any value \code{m : 'a merger} is a merging function}{}
+
+\subsection{Values}
+\specWS{rev}{'a perm}{true}{\code{rev L} evaluates to a list containing the elements of \code{L}, in the reverse order}{$O(n)$, where $n$ is the length of the input list}{$O(n)$}
+\spec{riffle}{'a perm}{true}{\code{riffle L} evaluates to a ``riffle shuffle'' permutation of \code{L}: the first half of the list interleaved with the second half}
+
+\spec{cleanSplit}{'a splitter}{true}{$\code{cleanSplit(L)}\stepsTo\code{(A,B)}$ where the lengths of \code{A} and \code{B} differ by at most one, and $\code{L}\eeq\code{A@B}$}
+\specWS{split}{'a splitter}{true}{$\code{split(L)}\stepsTo\code{(A,B)}$ where the lengths of \code{A} and \code{B} differ by at most one}{$O(n)$}{$O(n)$}
+
+\spec{interleave}{'a merger}{true}{\code{interleave(A,B)} consists of alternating elements of \code{A} and of \code{B}, in the same order they were in in their respective input lists}
+
+\specWS{merge}{'a ord -> 'a merger}{\code{A} and \code{B} are sorted with respect to \code{cmp}}{\code{merge cmp (A,B)} is sorted with respect to \code{cmp}}{\code{merge cmp (A,B)} is $O(m+n)$, where $m$ and $n$ are the lengths of \code{A} and \code{B}, respectively (this assumes \code{cmp} is $O(1)$)}{$O(m+n)$}
+
+\specWS{msort}{'a ord -> 'a perm}{true}{\code{msort cmp L} evaluates to a sorted (w.r.t \code{cmp}) permutation of \code{L}}{\code{msort cmp L} is $O(n\log n)$ where $n$ is the length of \code{L} (assuming \code{cmp} is $O(1)$)}{$O(n)$}
+
+\section{Lemmas}
+
+\begin{lemma}\label{append-assoc}
+    For all types \code{t} and all values \code{X,Y,Z : t list},
+        \[ \code{(X @ Y) @ Z} \qeq \code{X @ (Y @ Z)} \]
+\end{lemma}
+
+\begin{fact}\label{singleton-append}
+    For all types \code{t}, all values \code{x : t} and all values \code{L : t list},
+        \[ \code{[x]@L} \qeq \code{x::L} \]
+\end{fact}
+
+\begin{fact}\label{append-empty}
+    For all types \code{t} and all values \code{L : t list},
+        \[ \code{L@[]} \qeq \code{L} \]
+\end{fact}
+
+\begin{lemma}\label{append-count}
+    For all types \code{t}, all \code{cmp : t ord}, all values \code{y : t} and all values \code{L1,L2 : t list},
+        \[ \code{count cmp (y,L1@L2)} \qeq \code{(count cmp (y,L1)) + (count cmp (y,L2))} \]
+\end{lemma}
+
+\section{\texttt{rev} Correctness and Analysis}
+\subsection{Behavior}
+    The implementation of \code{rev} given in \texttt{Permute.sml} is as follows.
+    \auxLib{Permute.sml}{40}{45}
+    We must prove that this (a) indeed defines a value of type \code{'a perm}, (b) that \code{rev} reverses its input list, and then (c) analyze its runtime. We'll start with (b), by proving \code{rev} equivalent to a more canonical version of list reverse.
+
+    For the sake of this document, we'll understand the meaning of ``reverse order'' (as it appears in the spec of \code{rev}) to be given by the following function.
+    \begin{codeblock}
+        fun reverse [] = []
+          | reverse (x::xs) = (reverse xs)@[x]
+    \end{codeblock}
+    which happens to be total:
+    \begin{fact}\label{reverse-totality}
+        \code{reverse} is total
+    \end{fact}
+    So to prove the ENSURES of \code{rev}, we'll prove that \code{rev} and \code{reverse} are extensionally equivalent as functions. We begin with the following lemma about \code{trev}, the helper function for \code{rev}.
+    \begin{lemma}\label{trev-lemma}
+        For all types \code{t}, and all values \code{L : t list} and \code{acc : t list}
+            \[ \code{trev(L,acc)} \qeq \code{(reverse L)@acc}. \]
+    \end{lemma}
+    \begin{proof}
+        By structural induction on \code{L}.
+
+        \bcBox \code{L=[]}. Let \code{acc} be arbitrary.
+            \begin{align*}
+                \code{trev([],acc)}
+                    &\eeq \code{acc} \tag{Defn. \code{trev}}\\
+                    &\eeq \code{[]@acc} \tag{Defn. \code{@}}\\
+                    &\eeq \code{(reverse [])@acc} \tag{Defn. \code{reverse}}
+            \end{align*}
+        \isBox \code{L=x::xs} for some values \code{x : t}, \code{xs : t list}
+        \ihBox $\code{trev(xs,acc')} \eeq \code{(reverse xs)@acc'}$ for all values \code{acc' : t list}
+
+        Let \code{acc : t list} be arbitrary. \textit{WTS:} 
+            \[\code{trev(x::xs,acc)} \qeq \code{(reverse (x::xs))@acc} \]
+            \begin{align*}
+                \code{trev(x::xs,acc)}
+                    &\eeq \code{trev(xs,x::acc)} \tag{Defn. \code{trev}}\\
+                    &\eeq \code{(reverse xs)@(x::acc)} \tag*{\refIH}\\
+                    &\eeq \code{((reverse xs)@[x])@acc} \tag{\autoref{singleton-append}, \autoref{reverse-totality}, \autoref{append-assoc}}\\
+                    &\eeq \code{reverse(x::xs) @ acc} \tag{Defn. \code{reverse}}
+                \end{align*}
+        Done.
+    \end{proof}
+    Then the correctness of \code{rev} is immediate:
+    \begin{proposition} 
+        $\code{rev} \qeq \code{reverse}$
+    \end{proposition}
+    \begin{proof}
+        Pick an arbitrary type \code{t} and an arbitrary value \code{L : t list}. Then,
+        \begin{align*}
+            \code{rev L}
+                &\eeq \code{trev(L,[])} \tag{Defn. \code{rev}}\\
+                &\eeq \code{(reverse L)@[]} \tag{\autoref{trev-lemma}}\\
+                &\eeq \code{reverse L} \tag{\autoref{reverse-totality}, \autoref{append-empty}}
+        \end{align*}
+        proving the claim.
+    \end{proof}
+    \begin{corollary}
+        \code{rev} is total.
+    \end{corollary}
+\subsection{Asymptotic Complexity}
+
+\section{\texttt{cleanSplit}, \texttt{interleave}, and \texttt{riffle}}
+
+\section{Sorting}
+
+\end{document}
+
