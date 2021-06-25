@@ -1,0 +1,340 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{auxColor}{HTML}{004060}
+    \definecolor{mainColor}{HTML}{0080c0}
+    \definecolor{brightColor}{HTML}{e0f4ff}
+
+\title{Exponentials}
+\date{June 2021}
+
+\author{Jacob Neumann}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle
+
+\section{Exponentials}
+
+    The (base-2) \keyword{exponential function} is a mathematical function 
+        \[ 2^{(-)} : \N \to \N \]
+    sending $n$ to $2^n$. This operation is uniquely characterized by the following property:\\
+    \newcommand{\expmath}{\mainBox{Defn. $2^{(-)}$}}\expmath
+    \begin{align*}
+        2^0 &= 1\\
+        2^{n+1} &= 2\cdot 2^n. \tag{for all $n$}
+    \end{align*}
+    This characterization allows us to elegantly translate this function into Standard ML.
+
+    \newcommand{\defnexp}{\mainBox{Defn. \texttt{exp}}}\defnexp
+    \spec{exp}{int -> int}{$\code{n}\geq\code{0}$}{$\code{exp n} \eeq \code{2}^{\code n}$}
+    \auxLibBlank{exp.sml}{2}{3}
+
+    The proof that this function evaluates to a value (and specifically \textit{the correct value}) when applied to natural number values furnishes our first example in this course of proofs by \keyword{weak induction}.
+
+    \begin{theorem} A \end{theorem}
+    \newcommand{\exptotal}{\mainBox{Prop. 1}}\exptotal For every valuable expression \code{e : int} whose value is nonnegative, \code{exp(e)} is valuable.
+    \begin{proof}
+        By hypothesis, $\code{e}\evalsTo\code{v}$ for some $\code{v}\geq\code{0}$. It suffices to prove \code{exp(v)} valuable, which we do by weak induction on \code{v}.
+
+        \auxBox{BC} \code{v=0}
+            \begin{align*}
+                \code{exp 0} \quad&\stepsTo\quad \code{1} \tag*{\defnexp}
+            \end{align*}
+            So \code{exp 0} valuable.
+
+        \auxBox{IS} \code{v=n+1} for some $\code{n}\geq 0$\\
+        \auxBox{IH} $\code{(exp n)}\evalsTo \code{v'}$ for some value \code{v':int}\\
+        \textit{WTS:} $\code{exp(n+1)}\evalsTo \code{v''}$ for some value \code{v'':int}
+
+        \begin{align*}
+            \code{exp(n+1)} &\stepsTo \code{2 * exp(n)} \tag*{\defnexp}\\
+                &\stepsTo \code{2 * v'} \tag*{\auxBox{IH}}\\
+                &\stepsTo \code{v''} \tag{for some value \code{v''}, by totality of \code{*}}
+        \end{align*}
+        so our induction carries through.
+    \end{proof}
+    
+    The totality of \code{*} is required in the last step, to guarantee that \code{2*v'} is valuable. This establishes that \code{exp(n)} is valuable for all natural numbers \code{n}. We can also prove this function \textit{correct} as well, using {\small \expmath}.
+
+    \newcommand{\expcorrect}{\mainBox{Prop. 2}}\expcorrect\ For every value \code{n : int} such that $\code{n}\geq\code{0}$
+        \[ \code{exp(n)} \quad\eeq\quad \code{2}^{\code n} \]
+    \begin{proof}
+        By weak induction on \code{n}.
+
+        \auxBox{BC} \code{n=0}
+            \begin{align*}
+                \code{exp 0} 
+                    &\eeq \code{1} \tag*{\defnexp}\\
+                    &\eeq \code{2}^{\code{0}} \tag*{\expmath}
+            \end{align*}
+
+        \auxBox{IH} $\code{(exp n)}\evalsTo \code{2}^{\code n}$ for some value $\code{n}\geq\code{0}$\\
+        \textit{WTS:} $\code{exp(n+1)}\eeq \code{2}^{\code{n+1}}$
+
+        \begin{align*}
+            \code{exp(n+1)} &\eeq \code{2 * exp(n)} \tag*{\defnexp}\\
+                &\eeq \code{2 * 2}^{\code{n}} \tag*{\auxBox{IH}}\\
+                &\eeq \code{2}^{\code{n+1}} \tag*{\expmath}
+        \end{align*}
+
+        as desired.
+    \end{proof}
+
+\clearpage
+
+\section{Faster Implementation}
+
+Though we haven't yet developed the tools to demonstrate this precisely, we can tell intuitively by looking at the evaluation traces that \code{exp} is a \textit{linear time} function: the number of steps it takes to evaluate \code{exp(n)} is (approximately) proportional to \code{n}:
+\begin{trace}
+  \sp\sp\sp exp 10
+  \sp===>\sp 2 * exp 9
+  \sp===>\sp 2 * 2 * exp 8
+  \sp===>\sp 2 * 2 * 2 * exp 7
+  \sp===>\sp 2 * 2 * 2 * 2 * exp 6
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * exp 5
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * exp 4
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * exp 3
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * exp 2
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * exp 1
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * exp 0
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 1
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 2 * 4
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 2 * 8
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 2 * 16
+  \sp===>\sp 2 * 2 * 2 * 2 * 2 * 32
+  \sp===>\sp 2 * 2 * 2 * 2 * 64
+  \sp===>\sp 2 * 2 * 2 * 128
+  \sp===>\sp 2 * 2 * 256
+  \sp===>\sp 2 * 512
+  \sp===>\sp 1024
+\end{trace}
+This evaluation trace has 21 steps, that is, $2(10) + 1$.\footnote{If we had made different choices in how much evaluation to show, we would get another number of steps. For instance, if we write the intermediate step
+    \[ \code{exp 10} \stepsTo \code{2 * exp(10-1)} \stepsTo \code{2 * exp 9} \]
+    and likewise throughout the trace, then we would get 31 steps instead of 21. But the point still stands: the number of steps is proportional to the initial input.} If we similarly traced out \code{exp 11}, it would have $23=2(11)+1$ steps, \code{exp 17} would take $35=2(17)+1$ steps, and \code{exp 1000000} would have two-million-and-one steps. 
+
+\clearpage
+It turns out that we can perform this calculation faster, using some clever optimizations justified by basic number theory. Specifically, we'll make use of the following identities:
+\newcommand{\expopt}{\mainBox{$2^{(-)}$ opt.}}\vspace{0.5cm}\expopt
+
+\vspace{-1.5cm}
+\begin{align*}
+    2^n &= \left(2^{\lfloor n/2 \rfloor}\right)^2 \tag{$n$ even}\\
+    2^n &= 2\cdot \left(2^{\lfloor n/2 \rfloor}\right)^2 \tag{$n$ odd}
+\end{align*}
+Here, $\lfloor x \rfloor$ denotes the largest integer less than or equal to $x$. For $n$ even, $\lfloor n/2 \rfloor$ is just $n/2$ (since $n/2$ is an integer), whereas for $n$ odd, $\lfloor n/2\rfloor = \sfrac n 2 - \sfrac12$. Either way,\\
+\newcommand{\divfact}{\mainBox{Fact 3}}\vspace{0.5cm}\divfact
+
+\vspace{-1.5cm}
+\begin{align*}
+    \code{n div 2} \quad&\eeq\quad \left\lfloor\frac{\code n}{\code 2}\right\rfloor. \tag{$\code{n}\geq\code 0$}
+\end{align*}
+
+This motivates the following declarations:\\
+\newcommand{\defnpow}{\mainBox{Defn. \texttt{pow}}}\defnpow
+\spec{pow}{int -> int}{$\code n\geq\code 0$}{$\code{pow(n)}\eeq\code{exp(n)}$}
+\begin{codeblock}
+fun even (n:int):bool = (n mod 2)=0
+
+fun square (x:int):int = x * x
+
+fun pow (0:int):int = 1
+  | pow n = case (even n) of
+               true => square(pow(n div 2))
+            | false => 2 * pow(n-1) 
+\end{codeblock}
+We could have written the odd case as \code{2*square(pow(n div 2))}, but it will be easier to prove as-is.
+
+We can observe from the traces that this is more efficient:
+\begin{trace}
+    \sp\sp\sp pow 10
+    \sp===>\sp square(pow(5))
+    \sp===>\sp square(2 * pow(4))
+    \sp===>\sp square(2 * square(pow(2)))
+    \sp===>\sp square(2 * square(square(pow(1))))
+    \sp===>\sp square(2 * square(square(2 * pow 0)))
+    \sp===>\sp square(2 * square(square(2 * 1)))
+    \sp===>\sp square(2 * square(square(2)))
+    \sp===>\sp square(2 * square(2 * 2))
+    \sp===>\sp square(2 * square(4))
+    \sp===>\sp square(2 * 4 * 4)
+    \sp===>\sp square(32)
+    \sp===>\sp 32 * 32
+    \sp===>\sp 1024
+\end{trace}
+This trace of \code{pow(10)} has 13 steps. A similar trace of \code{pow(20)} would have 16 steps, a trace of \code{pow(40)} would have 19, and a trace of \code{pow(10485760)} would only have 73 steps!\footnote{Take a moment to appreciate how unfathomably large a number  \code{pow(10485760)} is: \textit{2 to the power 10 million, 485 thousand, 760}. SML has no hope of calculating a value that big, but it's pretty cool that in theory we could calculate it in just 73 steps.} Conclusion: \code{pow} is way more efficient than \code{exp}. Now we just need to prove that \code{pow} satisifes its spec: that it indeed behaves the exact same on natural numbers as \code{exp}.
+
+\section{Proving the faster version}
+
+Recall the notion of \keyword{referential transparency}: if two pieces of code are extensionally-equivalent, then they are \textit{interchangeable}: $\code e \eeq \code{e'}$ means that \code{e'} can be put in place of \code{e} in any piece of code, without changing its behavior at all. The situation with \code{exp} and \code{pow} is a paradigm example of where this principle is useful: it is, in general, much quicker to evaluate \code{pow(n)} than \code{exp(n)}. So, if we can prove that $\code{pow(n)}\eeq\code{exp(n)}$, then we can replace all the \code{exp(n)}'s in our code with \code{pow(n)} and take advantage of the improved speed, and we'd be assured that doing so would not affect anything whatsoever about the code. More precisely, the properties of \code{exp} articulated in \exptotal\ and \expcorrect\  will hold of \code{pow} as well. We'll have \textit{proven} it.
+
+\subsection{Numerical Lemmas}
+
+We'll need a couple lemmas to write this proof. First of all, the correctness of \code{pow} relies on the assumption that arithmetic in SML (specifically \code{div}) works correctly. So we'll explicitly and precisely articulate what properties we're relying on -- they turn out to be quite modest.
+
+\newcommand{\divpluslemma}{\mainBox{Lemma 4}}\divpluslemma\ For any valuable $\code{n}$ whose value is nonnegative and \textbf{even}, 
+    \[ \code{n} \eeq \code{(n div 2) + (n div 2)} \]
+
+\newcommand{\divlemma}{\mainBox{Lemma 5}}\divlemma\ For any value $\code{n}>\code{0}$,
+    \[ \code{(n div 2)}\text{ is valuable} \quad \text{ and }\quad 0\leq\code{(n div 2)}<\code{n} \]
+    
+Both of these lemmas are true: \code{div} implements integer division in SML correctly, including the properties demanded by these lemmas.
+
+We also need to require that our helper function \code{even} behaves properly. This is typical in proving code: helper functions correspond to lemmas, in that we usually need lemmas to guarantee that our helpers do the right thing.
+
+\newcommand{\evenlemma}{\mainBox{Lemma 6}}\evenlemma\ \code{even} is total, and for any value \code{n:int},
+\begin{itemize}
+    \item if \code{n} is even, $\code{(even n)}\stepsTo\code{true}$
+    \item if \code{n} is odd, $\code{(even n)}\stepsTo\code{false}$.
+\end{itemize}
+Again, if we believe that \code{mod} and integer equality are implemented correctly in SML, then this is true.
+
+\subsection{\texttt{exp} Lemma}
+    The final ingredient we'll need: a simple arithmetical property about \code{exp}. Recall that \code{exp n} implements $\code{2}^{\code{n}}$, and so inherits all relevant properties of exponentials. In particular, the property that
+        \begin{align*}
+            2^n \cdot 2^k &= 2^{n+k} \tag*{for all $n\in\N$}
+        \end{align*}
+        is also possessed by \code{exp}. We prove this fact straight from {\small \defnexp}, by induction (of course!).
+
+    \newcommand{\expadd}{\mainBox{Lemma 7}}\expadd\ For all \textit{valuable expressions} \code{n,k : int} whose values are nonnegative,
+        \[ \code{exp(n) * exp(k)} \quad\eeq\quad \code{exp(n+k)} \]
+    \begin{proof}
+        \newcommand{\vn}{$\code{v}_{\code n}$}
+        Let \code{k} be arbitrary and fixed, and write \vn\ for the value \code{n} evaluates to. We proceed by weak induction on \vn.
+
+        \auxBox{BC} \vn=\code{0}
+            \begin{align*}
+                    \code{exp n * exp k}
+                    &\eeq \code{exp 0 * exp k} \tag{\vn=\code 0}\\ 
+                    &\eeq \code{1 * exp k} \tag*{\defnexp}\\
+                    &\eeq \code{exp k} \tag{math}\\
+                    &\eeq \code{exp(0 + k)} \tag{math}\\
+                    &\eeq \code{exp(n + k)} \tag{\vn=\code 0}
+            \end{align*}
+
+        \auxBox{IS} \vn=\code{v+1} for some value $\code{v}\geq\code{0}$\\
+        \auxBox{IH} $\code{exp(v) * exp(k)}\eeq\code{exp(v+k)}$ \\
+        \textit{WTS:} $\code{exp(n) * exp(k)}\eeq \code{exp(n+k)}$
+
+        \begin{align*}
+            \code{exp n * exp k}
+                &\eeq \code{exp(v+1) * exp(k)} \tag{\vn=\code{v+1}}\\
+                &\eeq \code{2 * exp(v) * exp(k)} \tag*{\defnexp}\\
+                &\eeq \code{2 * exp(v+k)} \tag*{\auxBox{IH}}\\
+                &\eeq \code{exp((v+k)+1)} \tag{\defnexp, \code{v+k} valuable}\\
+                &\eeq \code{exp((v+1)+k)} \tag{math}\\
+                &\eeq \code{exp(n+k)} \tag{\vn=\code{v+1}}
+        \end{align*}
+        Where \code{v+k} is valuable because we assumed \code{v} is a value and \code{k} is valuable.
+    \end{proof}
+
+\clearpage
+
+\subsection{The Proof}
+
+Finally, we come to the correctness claim for \code{pow}.
+
+\mainBox{Thm. 8} For all values \code{n:int} with $\code n\geq\code 0$,
+    \[ \code{pow(n)} \quad\eeq\quad \code{exp(n)} \]
+
+Note the pattern of recursion utilized by \code{pow}: while in the \code{n} odd case the only recursive call made is to \code{pow(n-1)}, in the even case the recursive call is to \code{pow(n div 2)}. Given the tight connection between the form of a recursive function and its inductive correctness proof, this suggests to us that a weak inductive hypothesis will not suffice. So we'll prove this by strong induction.
+
+\begin{proof} By strong induction on \code{n}.
+
+        \auxBox{BC} \code{n=0}
+            \begin{align*}
+                \code{exp 0} 
+                    &\stepsTo \code{1} \tag*{\defnexp}\\
+                \code{pow 0}
+                    &\stepsTo \code{1} \tag*{\defnpow}
+            \end{align*}
+        so, since \code{pow 0} and \code{exp 0} evaluate to the same value, they are extensionally equivalent.
+        
+        \auxBox{IS} $\code{n}>\code{0}$\\
+        \auxBox{IH} $\code{pow(i)}\eeq\code{exp(i)}$ for all $\code{0}\leq\code{i}<\code n$\\
+        \textit{WTS:} $\code{pow(n)}\eeq \code{exp(n)}$
+
+        Break into two cases: \code{n} even and \code{n} odd. We'll start with odd.
+        \begin{align*}
+            \code{pow(n)}
+                &\eeq \code{2 * pow(n-1)} \tag*{\defnpow, \evenlemma}\\
+                &\eeq \code{2 * exp(n-1)} \tag*{\auxBox{IH}}\\
+                &\eeq \code{exp(n)} \tag*{\defnexp}
+        \end{align*}
+        
+        For the even case,
+        \begin{align*}
+            & \code{pow(n)} \\
+                &\eeq \code{square(pow(n div 2))} \tag*{\defnpow, \evenlemma}\\
+                &\eeq \code{square(exp(n div 2))} \tag*{\auxBox{IH}, \divlemma}\\
+                &\eeq \code{(exp(n div 2)) * (exp(n div 2))} \tag{defn. \code{square}, \divlemma, \exptotal}\\
+                &\eeq \code{exp((n div 2) + (n div 2))} \tag*{\expadd, \divlemma}\\
+                &\eeq \code{exp n} \tag*{\divpluslemma}
+        \end{align*}
+        and we're done.
+\end{proof}
+\clearpage
+
+\subsection{Details}
+Here, we explain each significant step from the preceding proof in greater detail.
+\begin{itemize}
+    \item From \code{n} odd:
+        \begin{align*}
+            \code{pow(n)}
+                &\eeq \code{2 * pow(n-1)} \tag*{\defnpow, \evenlemma}
+        \end{align*}
+        We need \evenlemma\ to guarantee that, since \code{n} is odd, \code{even n} will evaluate to \code{false}, so we'll go into the false-branch of the \code{case} expression in the definition of \code{pow}.
+    \item From \code{n} even:
+        \begin{align*}
+            \code{pow(n)}
+                &\eeq \code{square(pow(n div 2))} \tag*{\defnpow, \evenlemma}
+        \end{align*}
+        We need \evenlemma\ to guarantee that, since \code{n} is even, \code{even n} will evaluate to \code{true}, so we'll go into the true-branch of the \code{case} expression in the definition of \code{pow}.
+    \item From \code{n} even:
+        \begin{align*}
+                &\code{square(pow(n div 2))}\\
+                &\eeq \code{square(exp(n div 2))} \tag*{\auxBox{IH}, \divlemma}
+        \end{align*}
+        We need \divlemma\ here to guarantee for us that \code{n div 2} is valuable -- call its value \code{i}. \divlemma\ furthermore tells us that \code{i} is a natural number less than \code{n}, hence \code{i} is within the scope of quantification in the inductive hypothesis. So, more fully, we have this reasoning: 
+        \begin{align*}
+                &\code{square(pow(n div 2))}\\
+                &\eeq \code{square(pow(i))} \tag{$\code{n div 2}\evalsTo \code i$}\\
+                &\eeq \code{square(exp(i))} \tag{\auxBox{IH}, $\code{0}\leq\code{i}<\code{n}$ by \divlemma}\\
+                &\eeq \code{square(exp(n div 2))}. \tag{$\code{n div 2}\evalsTo \code i$}
+        \end{align*}
+    \item From \code{n} even:
+        \begin{align*}
+                &\code{square(exp(n div 2))}\\
+                &\eeq \code{(exp(n div 2)) * (exp(n div 2))} \tag{defn. \code{square}, \divlemma, \exptotal}
+        \end{align*}
+        Recall that \code{square} is \code{fn x => x * x}. So in this equivalence, we're saying that \code{square} applied to the expression \code{exp(n div 2)} is equivalent to the body of \code{square}, namely \code{x * x}, with both instances of \code{x} replaced by \code{exp(n div 2)}. If \code{exp(n div 2)} were a \textit{value}, this would just be an evaluation step:
+        \begin{align*}
+            \code{(fn x => x * x) v} \quad&\stepsTo\quad \code{v * v} \tag*{if \code{v} is a value.}
+        \end{align*}    
+        But \code{exp(n div 2)} isn't a value! However, we're in luck: it's enough that \code{exp(n div 2)} is \textit{valuable}:
+        \begin{align*}
+            \code{(fn x => x * x) e} \quad&\eeq\quad \code{e * e} \tag*{if \code{e} is valuable.}
+        \end{align*}
+        Note that is is an extensional equivalence, \textit{not} an evaluation step: SML will evaluate \code{exp(n div 2)} to a value \textit{before} substituting it into the body of the function, not substitute it unevaluated like written here. But the valuability guarantees that we can evaluate \code{exp(n div 2)} before substituting, or subtitute before evaluating, and get the same result. We referred to this as the ``valuable-stepping principle'' in lecture.
+
+        We therefore need to justify that \code{exp(n div 2)} is valuable. \divlemma\ tells us that \code{n div 2} is valuable and nonnegative. \exptotal\ takes this assumption and derives that \code{exp(n div 2)} is valuable, as needed.
+    \item From \code{n} even:
+        \begin{align*}
+                &\code{(exp(n div 2)) * (exp(n div 2))}\\
+                &\eeq \code{exp((n div 2) + (n div 2))} \tag*{\expadd, \divlemma}
+        \end{align*}
+        Notice that the statement of \expadd\ demands valuable, nonnegative expressions. \divlemma\ tells us that, since $\code n>\code 0$, \code{(n div 2)} is indeed a nonnegative, valuable expression. 
+\end{itemize}
+
+\section{Tail-Recursive Implementation}
+
+\section{Work Analysis}
+
+\end{document}
+
