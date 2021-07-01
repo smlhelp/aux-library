@@ -154,7 +154,7 @@
             rightline=false,
          bottomline=false]
          \hspace{-14pt}\mainBox{\bfseries\strut \;Type Spec\;}
-        \par\noindent\code{#1}
+        \ifstrempty{#1}{}{\par\noindent\code{#1}}
         \ifstrempty{#2}{}{\par\noindent {\bfseries\color{mainColor}INVARIANT:} #2}
         \ifstrempty{#3}{}{\par\indent #3}
     \end{mdframed}
@@ -265,9 +265,17 @@
         }
     
 \newcommand{\auxLib}[4][white]{\par%
-    {\hspace{-20pt}\colorbox{auxColor}{%
+    {\colorbox{auxColor}{%
         {\color{#1}%
-            \ aux-library: #2\ %
+            \ \textsf{aux-library: #2}\ %
+        }%
+    }%
+    \vspace{0.25cm}\codefile{../#2}{firstline=#3,firstnumber=#3,lastline=#4}}%
+}    
+\newcommand{\auxLibIndent}[5][white]{\par%
+    {\hspace{#5}\colorbox{auxColor}{%
+        {\color{#1}%
+            \ \textsf{aux-library: #2}\ %
         }%
     }%
     \vspace{0.25cm}\codefile{../#2}{firstline=#3,firstnumber=#3,lastline=#4}}%
@@ -324,6 +332,7 @@
 \newaliascnt{example}{theorem}
 \newaliascnt{definition}{theorem}
 \newaliascnt{fact}{theorem}
+\newaliascnt{note}{theorem}
 
 \newtheorem{proposition}[proposition]{Prop}
 \aliascntresetthe{proposition}
@@ -339,6 +348,8 @@
 \aliascntresetthe{definition}
 \newtheorem{fact}[fact]{Fact}
 \aliascntresetthe{fact}
+\newtheorem{note}[note]{Note}
+\aliascntresetthe{note}
 
      \surroundwithmdframed[
          linecolor=auxColor,
@@ -396,6 +407,13 @@
           topline=false,
             rightline=false,
          bottomline=false]{fact}
+     \surroundwithmdframed[
+         linecolor=auxColor,
+         innertopmargin=-1pt,
+          linewidth=4pt,
+          topline=false,
+            rightline=false,
+         bottomline=false]{note}
 \providecommand*{\theoremautorefname}{Thm.}
 \providecommand*{\definitionautorefname}{Defn.}
 \providecommand*{\propositionautorefname}{Prop.}
@@ -404,3 +422,4 @@
 \providecommand*{\claimautorefname}{Claim}
 \providecommand*{\exampleautorefname}{Example}
 \providecommand*{\factautorefname}{Fact}
+\providecommand*{\noteautorefname}{Note}
