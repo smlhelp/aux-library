@@ -1,0 +1,245 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{mainColor}{HTML}{d78e00}
+    \definecolor{auxColor}{HTML}{0080ff}
+    \definecolor{brightColor}{HTML}{fff8eb}
+
+\title{CPSIterate Module}
+\date{June/July 2021}
+
+\author{Jacob Neumann}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\clearpage
+
+\section{Type Declarations}
+
+\TypeSpec{}{}{\auxLibIndent{CPSIterate.sml}{4}{7}{-20pt}
+    The \code{result} type encodes possible instructions for how to proceed with a list iteration: either (1) terminate successfully with the current element, (2) keep the current element as part of ongoing accumulation, (3) discard the current element and proceed with iteration, or (4) terminate unsuccessfully with some error message.
+}
+\TypeSpec{}{}{\auxLibIndent{CPSIterate.sml}{26}{28}{-20pt}
+    The \code{command} type encodes possible instructions for how to proceed with an iterative process: either (1) terminate the iteration, (2) continue on to the next iteration, or (3) crash the process with some error message.
+}
+
+\clearpage
+\section{Main Definitions}
+
+\begin{note}
+    When we write a natural number (or integer) in math font (e.g. $n$), this refers to the mathematical integer $n$. When we use teletype font (e.g. \code{n}), this refers to the corresponding value of the SML type \code{int}. Likewise with the difference between, for instance, 3 and \code{3}.
+\end{note}
+
+\begin{definition}[Index]
+    Given a type \code{t} and a value \code{x : t},
+    \begin{itemize}
+        \item For any value \code{xs : t list}, we say that \code{x} is \keyword{at index} 0 of \code{x::xs}
+        \item For any values \code{xs : t list} and \code{x' : t}, if \code{x} is at index $n$ of \code{xs}, then \code x is at index $n+1$ of \code{x'::xs}
+    \end{itemize}
+\end{definition}
+
+\begin{definition}[List Iteration]
+    Given a type \code{t}, a total function \code{check : t -> result}, and a value \code{L : t list}, the \keyword{outcome  of iterating \code{L} using \code{check}} is defined to be:
+    \begin{itemize}
+        \item \textbf{A success with element \code{x}} if \code{x:t} is an element of \code{L} such that $\code{check x}\stepsTo\code{Accept}$, and, for any \code{x'} occurring before \code{x} in \code{L}, either $\code{check x'}\stepsTo\code{Keep}$ or $\code{check x'}\stepsTo\code{Discard}$
+        \item \textbf{A failure with message \code{s}} if \code{x:t} is an element of \code{L} such that $\code{check x}\stepsTo\code{Break s}$, and, for any \code{x'} occurring before \code{x} in \code{L}, either $\code{check x'}\stepsTo\code{Keep}$ or $\code{check x'}\stepsTo\code{Discard}$
+        \item \textbf{An accumulation with sublist \code{L'}} if, for all \code{x} in \code{L}, either $\code{check x}\stepsTo\code{Keep}$ or $\code{check x}\stepsTo\code{Discard}$, and
+            \[ \code{L'} \qeq \code{filter (fn x => (check x)=Keep) L} \]
+
+    \end{itemize}    
+\end{definition}
+
+%\begin{definition}[Iteration]
+%    Given a type \code{t}, a function \code{guard : t -> command}, a function \code{step : t -> (t -> 'a) -> 'a}, and a value \code{init:t}, the \keyword{iterative process} defined by \code{guard}, \code{step}, and \code{init} is a finite or infinite sequence\footnote{These are mathematical sequences, not the SML sequence data structure.}
+%        \[ \code v_0, \quad \code v_1, \quad \code v_2, \quad \ldots \]
+%    of values of type \code{t} such that:
+%    \begin{itemize}
+%        \item $\code v_0 = \code{init}$
+%        \item For each $n$, $\code{step (v}_n\code{) k} \eeq \code{k(v}_{n+1}\code)$ for all appropriately-typed \code{k}
+%        \item \textbf{If the sequence is finite} (say $\code v_N$ is the last entry in the sequence), then $\code{guard v}_n \stepsTo \code{Continue}$ for all $n<N$ and then either 
+%            \[ \code{guard v}_N \stepsTo \code{Stop} \qtq{or} \code{guard v}_N \stepsTo \code{Crash s} \]
+%            for some \code{s : string}.
+%        \item \textbf{If the sequence is infinite}, then $\code{guard v}_n \stepsTo \code{Continue}$ for all $n$
+%    \end{itemize}
+%\end{definition}
+
+\clearpage
+
+\section{Value Specifications}
+
+\Spec{For}{\code{  ('a -> result)}\\
+           &\code{-> ('a list)}\\
+           &\code{-> ('a -> 'b -> 'b)}\\
+           &\code{-> 'b}\\
+           &\code{-> ('a -> 'c)}\\
+           &\code{-> (string -> 'c)}\\
+           &\code{-> ('b -> 'c)}\\
+           &\code{-> 'c}
+           }
+           {\code{check} is total, \code{combine x} is total for every \code{x}}
+           {\code{For check L combine base success panic return} $\eeq$
+           \[ \begin{cases}
+               \vspace{0.5cm}\code{success(y)} &\parbox{6cm}{if the outcome of iterating \code{L} using \code{check} is a success with element \code{y}}\\
+                \vspace{0.5cm}\code{panic(s)} &\parbox{6cm}{if the outcome of iterating \code{L} using \code{check} is a failure with message \code{s}}\\
+                \code{foldr (Fn.uncurry combine) base L'} &\parbox{6cm}{if the outcome of iterating \code{L} using \code{check} is an accumulation with sublist \code{L'}}
+           \end{cases} \]
+           }
+
+\section{\texttt{For} Correctness}
+
+    \subsection{Preliminaries}
+\begin{definition}[Terminator]
+    The values \code{Accept} and \code{Break(s)} (for any \code{s:string}) are called the \keyword{terminator} values of type \code{result}. 
+
+    \code{Keep} and \code{Discard} are the non-terminator values.
+\end{definition}
+
+\begin{definition}
+    For the purposes of this document, we define the following specification function:
+    \Spec{firstTerminator}{\code{  ('a -> result)}\\
+                           &\code{-> 'a list}\\
+                           &\code{-> (int * 'a * result) option}
+                          }
+                          {\code{check} is total}
+                          {$\code{firstTerminator check L} \eeq$
+        \[ 
+            \begin{cases}
+                \vspace{0.5cm}\code{NONE} &\text{if \code{map check L} contains no terminators}\\
+                \code{SOME(n,y,R)} &\parbox{7cm}{if \code{y} is the first element in \code{L} such that \code{check y} evaluates to some terminator \code{R}, and moreover \code y is at index \code{n} of \code{L}}
+            \end{cases}
+        \]
+                          }
+    \begin{codeblock}
+    fun firstTerminator check [] = NONE
+      | firstTerminator check (x::xs) = 
+          case (check x) of
+            Accept => SOME(0,x,Accept)
+          | (Break s) => SOME(0,x,Break s)
+          | _ => (case (firstTerminator check xs) of
+                    (SOME(n,y,R)) => SOME(n+1,y,R)
+                  | NONE => NONE)
+    \end{codeblock}
+\end{definition}
+
+\begin{claim}\label{claim:firstTerm}
+    Given \code{check} and \code{L} as in the spec of \code{For}:
+    \begin{itemize}
+        \item The outcome of iterating \code{L} using \code{check} is a success with element \code{y} if and only if 
+            \[ \code{firstTerminator check L} \qeq \code{SOME(n,y,Accept)} \]
+            for some \code{n}
+        \item The outcome of iterating \code{L} using \code{check} is a failure with message \code{s} if and only if 
+            \[ \code{firstTerminator check L} \qeq \code{SOME(n,y,Break s)} \]
+            for some \code{y} and \code{n}.
+    \item The outcome of iterating \code{L} using \code{check} is an accumulation with sublist \code{L'} (for some \code{L'}) if and only if 
+            \[ \code{firstTerminator check L} \qeq \code{NONE} \]
+    \end{itemize}
+\end{claim}
+
+\begin{claim} \label{claim:terminator-index}
+    If $\code{firstTerminator check L}\eeq\code{SOME(n,y,R)}$, then \code{y} is at index $n$ of \code{L} and $\code{check y}\eeq\code{R}$ 
+\end{claim}
+
+\begin{claim} \label{claim:terminator-preindex}
+    If $\code{firstTerminator check (x::xs)}\eeq\code{SOME(n,y,R)}$ for some $n>0$, then 
+        \[ \code{check x} \text{ is a non-terminator} \]
+\end{claim}
+\begin{proof}
+    If \code{check x} were a terminator \code{R}, then observe that \code{firstTerminator check (x::xs)} would evaluate to \code{SOME(0,y,R)}, contrary to our assumption that $n>0$.
+\end{proof}
+
+\begin{note}
+    Henceforth, we refer to the helper function \code{run : t1 list -> (t2 -> t3) -> t3}, defined inside a \code{let} in the body of \code{For}. The types \code{t1,t2,t3} are determined by the arguments passed to \code{For}, which are in scope when evaluating \code{run}.
+    \begin{itemize}
+        \item \code{check : t1 -> result}
+        \item \code{combine : t1 -> t2 -> t2}
+        \item \code{base : t2}
+        \item \code{success : t1 -> t3}
+        \item \code{panic : string -> t3}
+    \end{itemize}
+    Whenever we state results about \code{run}, these are fixed in the background; any of these values not mentioned in the statement can be assumed to be arbitrary (though, following the spec of \code{For}, we assume \code{check} is total and \code{combine x} is total for all \code{x}). Note that, in addition to these, \code{For} also takes in \code{L : t1 list} and \code{return : t2 -> t3}. These values don't occur in the body of \code{run} (they're the arguments \code{run} is applied to), but they are technically in scope whenever \code{run} is being evaluated.
+\end{note}
+
+\auxLib{CPSIterate.sml}{63}{70}
+
+\subsection{\texttt{Accept}-Correctness of \code{For}}
+
+\begin{lemma}\label{lemma:accept-correctness}
+    If $\code{firstTerminator check L}\eeq\code{SOME(n,y,Accept)}$, then for all appropriately-typed \code{k},
+        \[ \code{run L k } \qeq \code{success y} \] 
+\end{lemma}
+\begin{proof}
+    We proceed by weak induction on $n$.
+
+    \bcBox{} If $n=0$, then by \autoref{claim:terminator-index}, \code{y} is at index 0 of \code{L}, i.e. \code{L=y::xs} for some \code{xs}, and moreover 
+        \[ \code{check y} \stepsTo \code{Accept}. \]
+    So then, for any \code{k},
+    \begin{align*}
+        \code{run (y::xs) k}
+        &\stepsTo \code{case (check y) of ...} \tag{defn \code{run}}\\
+        &\stepsTo \code{case (Accept) of ...} \tag{above}\\
+        &\stepsTo \code{success y} \tag{defn \code{run}}
+    \end{align*}
+    Where the \code{...}'s indicate the rest of the body of \code{run}. So $\code{run L k}\eeq\code{success y}$ as desired.
+
+    \ihBox Suppose for some $n$ that: if $\code{firstTerminator check xs}\eeq\code{SOME(n,y,Accept)}$, then for all appropriately-typed \code{g}, 
+        \[ \code{run xs g} \qeq \code{success y} \]
+
+    Assume $\code{firstTerminator check L}\eeq\code{SOME(n+1,y,Accept)}$. Then \code{L} must be nonempty, so let \code{L=x::xs}. Then, since $n+1>0$, by \autoref{claim:terminator-preindex} we must have that 
+        \[ \code{check x} \text{ is a non-terminator}. \]
+    So either \code{check(x)} is \code{Keep} or \code{Discard}. The proofs of the claim in these two cases are almost identical, but we'll do the \code{Keep} case since it's a little bit more tricky. For arbitrary \code{k}, 
+        \begin{align*}
+        \code{run (x::xs) k}
+        &\stepsTo \code{case (check x) of ...} \tag{defn \code{run}}\\
+        &\stepsTo \code{case (Keep) of ...} \tag{assumption}\\
+        &\stepsTo \code{run xs (k o (combine x))} \tag{defn \code{run}}\\
+        &\eeq \code{success y} \tag*{\refIH}
+        \end{align*}
+        as desired. To see why \refIH is applicable in the last step, recall that: 
+        \begin{enumerate}
+            \item[(A)] \code{check x} is a non-terminator
+            \item[(B)] $\code{firstTerminator check (x::xs)} \eeq \code{SOME(n+1,y,Accept)}$.
+        \end{enumerate}
+        By (A) and the definition of \code{firstTerminator},
+        \begin{align*} 
+            &\code{firstTerminator check (x::xs)} \\
+            & \stepsTo\\
+            &\parbox{15cm}{
+                \code{(case (firstTerminator check xs) of}\\
+                \code{\ \ (SOME(n,y,R)) => SOME(n+1,y,R)}\\
+                \code{\ | NONE => NONE)}} 
+        \end{align*}
+        So we can see that if (B) is true, it must be the case that
+        \[ \code{firstTerminator check xs} \eeq \code{SOME(n,y,Accept)}. \]
+        And thus the antecedent of the inductive hypothesis is satisfied, so, taking \code{g} to be \code{(k o (combine x))}, we have
+        \[ \code{run xs (k o (combine x))} \qeq \code{success y}. \]
+        
+        The case where $\code{check(x)}\stepsTo\code{Discard}$ is similar.
+\end{proof}
+
+\begin{corollary}[\texttt{Accept}-correctness]
+    If the outcome of iterating \code{L} using \code{check} is a success with element \code{y}, then for all appropriately-typed \code{combine}, \code{base}, \code{success}, \code{panic}, and \code{return},
+        \[ \code{For check L combine base success panic return } \qeq \code{success y} \] 
+\end{corollary}
+\begin{proof}
+    Use the first bullet point of \autoref{claim:firstTerm}, and then by \autoref{lemma:accept-correctness} get that
+        \[ \code{run L return} \qeq \code{success y} \]
+    proving the claim.
+\end{proof}
+
+
+\subsection{\texttt{Break}-Correctness of \code{For}}
+
+\subsection{Accumulation-Correctness of \code{For}}
+
+
+\end{document}
+
