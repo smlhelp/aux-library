@@ -2,34 +2,34 @@ use "Language.sml";
 
 signature REGEXP =
 sig
-    datatype ''a regexp =
-          Const of ''a
+    datatype ''S regexp =
+          Const of ''S
         | One
         | Zero
-        | Times of ''a regexp * ''a regexp
-        | Plus of ''a regexp * ''a regexp
-        | Star of ''a regexp
+        | Times of ''S regexp * ''S regexp
+        | Plus of ''S regexp * ''S regexp
+        | Star of ''S regexp
 
-    val depth : ''a regexp -> int
+    val depth : ''S regexp -> int
 
     exception NoMatch
 
-    val match : ''a regexp -> ''a list -> (''a list * ''a list -> 'b) -> 'b
+    val match : ''S regexp -> ''S list -> (''S list * ''S list -> 'b) -> 'b
 
-    val LL : ''a regexp -> ''a Language.language       
+    val LL : ''S regexp -> ''S Language.language       
  
 end
 
 structure Regexp : REGEXP = 
 struct
 
-    datatype ''a regexp =
-          Const of ''a
+    datatype ''S regexp =
+          Const of ''S
         | One
         | Zero
-        | Times of ''a regexp * ''a regexp
-        | Plus of ''a regexp * ''a regexp
-        | Star of ''a regexp
+        | Times of ''S regexp * ''S regexp
+        | Plus of ''S regexp * ''S regexp
+        | Star of ''S regexp
 
     fun depth (Const(_)) = 1
       | depth One = 0
@@ -43,7 +43,7 @@ struct
 
     exception NoMatch
 
-(* match : ''a regexp -> ''a list -> (''a list * ''a list -> 'b) -> 'b
+(* match : ''S regexp -> ''S list -> (''S list * ''S list -> 'b) -> 'b
 
    REQUIRES: for all (p,s), k(p,s) either evaluates to a value or raises
    NoMatch
