@@ -1,4 +1,4 @@
-use "Lang.sml";
+use "Language.sml";
 
 signature REGEXP =
 sig
@@ -16,8 +16,8 @@ sig
 
     val match : ''a regexp -> ''a list -> (''a list * ''a list -> 'b) -> 'b
 
-    val LL : char regexp -> Language.language       
-
+    val LL : ''a regexp -> ''a Language.language       
+ 
 end
 
 structure Regexp : REGEXP = 
@@ -95,7 +95,8 @@ struct
                             k(res'@res'',cs'')))
 
     val LL = fn r => fn s => 
-        match r (String.explode s) (fn (_,[]) => true | _ => raise NoMatch)
+        match r s (fn (_,[]) => true | _ => raise NoMatch)
         handle NoMatch => false
+
 end
 
