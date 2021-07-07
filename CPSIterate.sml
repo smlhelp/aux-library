@@ -64,10 +64,10 @@ fun For (check : 'a -> result)
           k base
       | run (x::xs) k =
           (case (check x) of
-              Accept => success x
-          |     Keep => run xs (k o (combine x))
-          |  Discard => run xs k
-          | (Break s)=> panic s)
+             Accept => success x
+          |    Keep => run xs (k o (combine x))
+          | Discard => run xs k
+          |(Break s)=> panic s)
   in
     run L return
   end
