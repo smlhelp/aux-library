@@ -1,0 +1,281 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{auxColor}{HTML}{804020}
+    \definecolor{mainColor}{HTML}{e48020}
+    \definecolor{brightColor}{HTML}{ffefe0}
+
+\title{Regular Expressions -- Specification and Correctness Proof}
+\author{Jacob Neumann}
+\date{\today}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle
+
+\section{Specifications}
+\auxLib{Regexp.sml}{3}{22}
+
+\begin{alignat*}{2}
+    &\mc L(\code{Const(c)}) \quad &&= \quad \set{\code{[c]}}\\ 
+    &\mc L(\code{Zero}) \quad &&= \quad \emptyset\\ 
+    &\mc L(\code{One}) \quad &&= \quad \set{\code{[]}}\\ 
+    &\mc L(\code{Times(r1,r2)}) \quad &&= \quad \compSet{\code{s1@s2}}{\code{s1}\in\mc L(\code{r1})\text{ and }\code{s2}\in\mc L(\code{r2})}\\ 
+    &\mc L(\code{Plus(r1,r2)}) \quad &&= \quad \mc L(\code{r1})\cup \mc L(\code{r2})\\ 
+    &\mc L(\code{Star(r)}) \quad &&= \quad \compSet{\code{s1 @ s2 @ ... @ sn}}{n\in\N,\ \code{s1,s2,..., sn}\in\mc L(r)}
+\end{alignat*}
+
+\auxBox{Defn.} For any type \code{t}, a pair \code{(p,s) : t list * t list} is said to be a \keyword{splitting} of \code{L : t list} if
+    \[ \code{L} \eeq \code{p @ s}. \]
+    In such a splitting, \code{p} is called the \keyword{prefix} and \code{s} the \keyword{suffix}.
+
+\Spec{match}{%
+    \code{''a regexp -> ''a list}\\
+    &\quad\quad\code{ -> (''a list * ''a list -> 'b) -> 'b}}
+{for all \code{(p,s)}, \code{k(p,s)} either reduces to a value or raises \code{NoMatch}}
+{    \[ \code{match r cs k} \eeq \begin{cases}
+    \code{k(p,s)} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code r)$ and \code{k(p,s)} reduces to a value}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+}
+
+\section{(Almost) Totality}
+\auxBox{Prop.}  For any equality type \code{T}, any type \code{t}, any value \code{r : T regexp}, any value \code{cs : T list}, and any value \code{k : T list * T list -> t} satisfying the REQUIRES clause for \code{match}, either
+    \[ \code{match r cs k}\evalsTo\code{v}\text{ for some }\code v \qtq{or} \code{match r cs k}\text{ raises }\code{NoMatch} \]
+\begin{proof}
+    Let \code{k} be an arbitrary value satisfying the REQUIRES. We proceed by structural induction on \code{r}.
+
+    \noindent\auxBox{Base Case: \texttt{Const}} \code{r=Const(a)} for some \code{a:T}. If \code{cs=[]} or \code{cs=c::cs'} for some \code{c<>a}, then observe
+        \[ \code{match r cs k}\qeq\code{raise NoMatch}. \]
+        Otherwise, if $\code{cs}\eeq\code{a::cs'}$, then
+        \[ \code{match r cs k}\quad\evalsTo\quad \code{k([a],cs')} \]
+        and, by hypothesis, \code{k} either evaluates to a value or raises \code{NoMatch}.
+   
+    \noindent\auxBox{Base Case: \texttt{Zero}} \code{r=Zero}. Observe \code{match Zero cs k} always raises \code{NoMatch}, satisfying the claim.
+   
+    \noindent\auxBox{Base Case: \texttt{One}} \code{r=One}.
+        \[ \code{match One cs k}\quad\evalsTo\quad\code{k([],cs)} \]
+        and, by hypothesis, \code{k} either evaluates to a value or raises \code{NoMatch}.
+       
+    \noindent\auxBox{Inductive Hypothesis} For all \code{g} satisfying the REQUIRES, and all \code{cs},
+    \begin{align*}
+        \code{match r1 cs g}\evalsTo\code{v}\text{ for some }\code v \qtq{or} \code{match r1 cs g}\text{ raises }\code{NoMatch} \\ 
+        \code{match r2 cs g}\evalsTo\code{v}\text{ for some }\code v \qtq{or} \code{match r2 cs g}\text{ raises }\code{NoMatch}
+    \end{align*}
+    \noindent\auxBox{Inductive Step: \code{Times}} \code{r=Times(r1,r2)}. 
+     Notice that since \code{k} satisfies the REQUIRES, the function \code{k''} given by
+        \[ \code{fn (res'',cs'') => k(res'@res'',cs'')} \]
+    also satisfies the REQUIRES (assuming \code{res'} is some value). We can use this fact, plus our inductive hypothesis for \code{r2}, to get that the function \code{k'} given by
+        \[ \code{fn (res',cs') => match r2 cs' k''} \]
+    always either evaluates to a value or raises \code{NoMatch} when applied to some value \code{(res',cs')}. Thus \code{k'} satisfies the REQUIRES. So, by the inductive hypothesis for \code{r1},
+        \[ \code{match r1 cs k'}\evalsTo\code{v}\text{ for some }\code v \qtq{or} \code{match r1 cs k'}\text{ raises }\code{NoMatch} \]
+        and since $\code{match r cs k}\stepsTo\code{match r1 cs k'}$, we have the claim.
+
+    \noindent\auxBox{Inductive Step: \code{Plus}} \code{r=Plus(r1,r2)}. By the inductive hypothesis for \code{r1}, we have that \code{match r1 cs k} either evaluates to a value or raises \code{NoMatch}. If it raises \code{NoMatch}, then
+        \[ \code{match r cs k}\qstepq\code{match r2 cs k}\]
+        and, by the inductive hypothesis for \code{r2}, this either evaluates to a value or raises \code{NoMatch}.
+    
+    \noindent\auxBox{Inductive Step: \code{Star}} \code{r=Star(r1)}. By the assumption that \code{k} satisfies the REQUIRES, the evaluation of \code{k([],cs)} either evaluates to a value or raises \code{NoMatch}. If it evaluates to a value \code{v}, then
+        \[ \code{match (Star(r1)) cs k}\quad\evalsTo\quad\code{v} \]
+        too. If it raises \code{NoMatch}, then
+        \[ \code{match r cs k}\qstepq \parbox[t]{0.5\textwidth}{
+                \code{match r cs (fn (res',cs') =>}\\ 
+                \code{if (cs = cs')}\\
+                \code{then raise NoMatch}\\
+                \code{else}\\
+                         \code{match (Star(r)) cs' (fn (res'',cs'') => 
+                             k(res'@res'',cs'')))}}\]
+        Now observe that the continuation
+        \[ \parbox[t]{0.85\textwidth}{
+            \code{(fn (res',cs') =>}\\ 
+            \code{\ \ \ \ if (cs = cs')}\\
+            \code{\ \ \ \ then raise NoMatch}\\
+            \code{\ \ \ \ else match (Star(r)) cs' (fn (res'',cs'') =>}\\
+            \code{\ \ \ \ \ \ \ \ k(res'@res'',cs'')))}} \]
+        either evaluates to a value or raises \code{NoMatch} for any \code{(res',cs')}: if \code{cs=cs'}, then this raises \code{NoMatch}. Otherwise, it steps to
+        \[ \code{match (Star(r)) cs' (fn (res'',cs'') => k(res'@res'',cs''))}. \]
+        Since \code{k} evaluates to a value or raises \code{NoMatch}, so does \code{(fn (res'',cs'') => k(res'@res'',cs''))}, and so t
+\end{proof}
+ 
+
+
+\section{Correctness}
+
+\auxBox{Defn.} Given \code{r : T regexp} and \code{k} satisfying the REQUIRES of \code{match}, a pair of \code{T list} values \code{(p,s)} is said to \keyword{satisfy} \code{r} and \code{k} if
+    \[ \code{p}\in\mc L(\code{r}) \qtq{and} \code{k(p,s)}\evalsTo\code{v}\text{ for some value }\code{v} \]
+
+\auxBox{Thm.} For any equality type \code{T}, any type \code{t}, any value \code{cs : T list}, and any value \code{k : T list * T list -> t} satisfying the REQUIRES clause for \code{match},
+    \[  \code{match r cs k} 
+        \eeq  \begin{cases}
+            \code{k(p,s)} & \parbox[t]{.35\textwidth}{where \code{(p,s)} is a splitting of \code{cs} that satisfies \code{r} and \code{k}}\\
+                \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+              \end{cases}
+    \]
+\begin{proof}
+    Proceed by structural induction on \code{r}.
+
+    \noindent\auxBox{Base Case: \texttt{Const}} \code{r=Const(a)} for some \code{a:T}. Pick arbitrary \code k satisfying the REQUIRES. We split into two cases, \code{cs=[]} and \code{cs=c::cs'}. If \code{cs=[]}, then the only possible prefix of \code{cs} is \code{[]}. However,
+        \[ \code{[]} \not\in \mc L(\code{Const(a)}), \]
+    so no splitting of \code{cs} can satisfy \code{r} and \code{k}. Accordingly,
+        \begin{align*} 
+            \code{match (Const(a)) [] k} \qeq \code{raise NoMatch}. \tag*{\specSat}
+        \end{align*}
+
+    If \code{cs=c::cs'}, then either \code{c=a} or \code{c<>a}. If \code{c=a}, then \code{[c]} is the only prefix of \code{cs} which is in $\mc L(\code{Const(a)})$. Since
+        \begin{align*}
+            \code{match (Const(a)) (c::cs') k}\qstepq\code{k([c],cs')} \tag{when \code{c=a}}
+        \end{align*}
+        we get that \code{match r cs k} will evaluate to whatever value \code{k(p,s)} evaluates to if \code{([c],cs')} satisfies \code{r} and \code{k}, or raise \code{NoMatch} if \code{k([c],cs')} does. \specSat If \code{c<>a}, then no prefix of \code{cs} is in $\mc L(\code r)$, so no splitting of \code{cs} satisfies \code{r} and \code{k}. So \code{match r cs k} raises \code{NoMatch}. \specSat
+    
+    \noindent\auxBox{Base Case: \texttt{Zero}} \code{r=Zero}. Pick arbitrary \code{cs} and arbitrary \code{k} satisfying the REQUIRES. There is no prefix of \code{cs} in $\mc L(\code{r})=\emptyset$, so no splitting of \code{cs} satisfies \code{r} and \code{k}. Therefore,
+        \begin{align*}
+            \code{match Zero cs k}\qeq \code{raise NoMatch}. \tag*{\specSat}
+        \end{align*}
+    
+    \noindent\auxBox{Base Case: \texttt{One}} \code{r=One}. For any \code{cs}, the prefix \code{[]} is in $\mc L(\code{One})$, and this is the only prefix of \code{cs} in $\mc L(\code{One})$. Therefore, the only splitting of \code{cs} that could possibly satisfy \code{r} and \code{k} is \code{([],cs)}. So
+        \[ \code{match One cs k}\qstepq\code{k([],cs)} \]
+    so \code{match r cs k} evaluates to the same value as \code{k([],cs)} if \code{([],cs)} satisfies \code{r} and \code{k}, and raises \code{NoMatch} if not. \specSat
+
+    \noindent\auxBox{Inductive Hypothesis} For all \code{k} satisfying the REQUIRES, and all \code{cs},
+    \begin{align*}
+        \code{match r1 cs k} 
+        &\eeq  \begin{cases}
+            \code{k(p,s)} & \parbox[t]{.35\textwidth}{where \code{(p,s)} is a splitting of \code{cs} that satisfies \code{r1} and \code{k}}\\
+                \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+              \end{cases}\\
+      \code{match r2 cs k} 
+        &\eeq  \begin{cases}
+            \code{k(p,s)} & \parbox[t]{.35\textwidth}{where \code{(p,s)} is a splitting of \code{cs} that satisfies \code{r2} and \code{k}}\\
+                \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+              \end{cases}
+    \end{align*}
+
+    \noindent\auxBox{Inductive Step: \code{Times}} \code{r=Times(r1,r2)}. 
+    
+    Let \code{k} be any function satisfying the REQUIRES.
+    %First, suppose there is some splitting \code{(p,s)} of \code{cs} that satisfies \code{r} and \code{k}. This means:
+    %\begin{itemize}
+    %    \item $\code{p}\in\mc L(\code{Times(r1,r2)})$, i.e. there exists $\code{p1}\in\mc L(\code{r1})$ and $\code{p2}\in\mc L(\code{r2})$ such that $\code{p}\cong\code{p1@p2}$
+    %    \item \code{k(p,s)} reduces to a value
+    %\end{itemize}
+
+
+        Suppose there is a splitting \code{(p,s)} of \code{cs} satisfying \code{Times(r1,r2)} and \code{k}. Then, by definition, there must be $\code{p1}\in\mc L(\code{r1})$ and $\code{p2}\in\mc L(\code{r2})$ such that $\code{p}\eeq\code{p1@p2}$ and \code{k(p,s)} evaluates to some value. So then observe 
+            \[ \code{(p1,p2@s)}\text{ satisfies \code{r1} and \code{k'}}. \]
+        To see this, note that $\code{p1}\in\mc L(\code{r1})$ and that
+        \begin{align*}
+            &\code{k'(p1,p2@s)}\\
+                &\stepsTo \code{match r2 cs' k''} \tag{$\code{p2@s}\evalsTo\code{cs'}$}\\
+                &\eeq \begin{cases}
+                \code{k''(p'',s'')} & \parbox[t]{.35\textwidth}{where \code{(p'',s'')} is a splitting of \code{cs'} that satisfies \code{r2} and \code{k''}}\\
+                \code{raise NoMatch} & \text{if there is no such \code{(p'',s'')}}
+              \end{cases}
+        \end{align*}
+        but there is such a \code{(p'',s'')}, namely \code{(p2,s)}. This is because we specified that $\code{p2@s}\eeq\code{cs'}$, we assumed that $\code{p2}\in\mc L(\code{r2})$ and we know \code{k''(p2,s)} evaluates to a value:
+        \begin{align*}
+            \code{k''(p2,s)} &\stepsTo \code{k(p1@p2,s)}\\
+                             &\eeq \code{k(p,s)} \tag{$\code{p1@p2}\eeq\code{p}$, above}\\
+                             &\evalsTo\text{ some value} \tag{assumed above}
+        \end{align*}
+        So, in this case, we get that
+            \[ \code{match r cs k} \qeq \code{k(p,s)}. \]
+        \specSat
+
+        Now assume there is no such splitting of \code{cs} which satisfies \code{Times(r1,r2)} and \code{k}. This could be the case because there is no prefix of \code{cs} in $\mc L(\code{r1})$. In this case, there cannot be any \code{(p',s')} satisfying \code{r1} and \code{k}, so we'll get
+            \begin{align*}
+                \code{match r cs k}\qeq \code{raise NoMatch}. \tag*{\specSat}
+            \end{align*}
+        So suppose \code{p1} is some prefix of \code{cs} which is in $\mc L(\code{r1})$.
+
+    \noindent\auxBox{Inductive Step: \code{Plus}}
+    
+    \noindent\auxBox{Inductive Step: \code{Star}}
+\end{proof}
+
+\end{document}
+\begin{itemize}
+    \item Does typechecking occur before, after, or at the same time as evaluation? \Blank{before}
+    \item Can an ill-typed expression be evaluated? \Blank{No}
+    \item How is the type of an expression determined?
+        \stBlank\ifsol
+            Recursively, based on the types of its subexpressions.
+        \fi\enBlank
+\end{itemize}
+
+\section{Extensional Equivalence}
+
+\auxBox{Defn.} Well-typed expressions \code{e} and \code{e'} are said to be \keyword{extensionally equivalent} (written $\code{e}\eeq\code{e'}$) if \Blank[6cm]{they have the same type} and either:
+\begin{itemize}
+    \item \Blank[10cm]{\code{e} and \code{e'} evaluate down to the same value \code{v}},
+    \item \Blank[10cm]{the evaluation of \code{e} and \code{e'} both loop forever}, or
+    \item \Blank[10cm]{the evaluation of \code{e} and \code{e'} both raise the same exception}.
+\end{itemize}
+If I have a chain of extensional equivalences of the form
+    \begin{align*}
+        \code{e}_{\code 1} 
+            &\eeq \code{e}_{\code 2}\\
+            &\eeq \code{e}_{\code 3}\\
+            &\;\;\vdots\\
+            &\eeq \code{e}_{\code n}
+    \end{align*}
+why am I allowed to conclude that $\code{e}_{\code n}\cong\code{e}_{\code 1}$?
+\stBlank\ifsol
+    Because $\cong$ is an equivalence relation, so is symmetric and transitive.
+\fi\enBlank
+\ifsol \else \clearpage \fi
+True or false:
+\begin{itemize}
+    \item \Blank{false} if $\code{e}\cong\code{e'}$ then $\code{e}\stepsTo\code{e'}$.
+    \item \Blank{true} if $\code{e}\stepsTo\code{e'}$ then $\code{e}\cong\code{e'}$.
+    \item \Blank{true} if $\code{e}\cong\code{e'}$, then \code{e} is valuable if and only if \code{e'} is.
+\end{itemize}
+
+\section{Binding \& Scope}
+
+Write the SML syntax for making a binding of the integer value 5 to the identifier \code{x} (don't forget type annotations!)
+\stCodeBlank\ifsol
+    \begin{codeblock}
+        val x : int = 5
+    \end{codeblock}
+\fi\enBlank
+
+Consider the following piece of SML code
+\begin{codeblock}
+    val a : string = "world"
+    val b : string = "hello " ^ a
+    val a : string = "there"
+    val c : string = "(" ^ b ^ ")"
+\end{codeblock}
+\begin{itemize}
+    \item Notice that we make a binding to \code{a} on both the first and third lines. What's it called when we do that? \Blank{shadowing}
+    \item Should you ever do that in your own code? \Blank{No}
+    \item What value gets bound to \code{c}? \Blank{\code{"(hello world)"}}
+    \item Explain your answer to the previous blank
+        \stBlank\ifsol
+            When evaluating the expression \code{"hello " ^ a} on the second line, the value bound to \code{a} in the current environment is \code{"world"}, so \code{"hello " ^ a} will evaluate to \code{"hello world"}, and that value will get bound to \code{b}. When evaluating the expression on the last line, this is still the most recent binding to \code{b}, even though we've shadowed \code{a}. So \code{"hello world"} will be used for \code{b} in \code{"(" ^ b ^ ")"}, and thus \code{"(hello world)"} will be the value bound to \code{c}.
+        \fi\enBlank
+\end{itemize}
+
+\clearpage
+
+\section{Function Application}
+What does it mean if a value \code{v} has type \code{T1 -> T2} for some types \code{T1}, \code{T2}?
+\stBlank\ifsol
+    It means that \code{v} is a function, which accepts arguments of type \code{T1} and outputs values of type \code{T2}
+\fi\enBlank
+When is an expression of the form
+\begin{codeblock}
+    e1 e2
+\end{codeblock}
+well-typed? What's its type?
+\stBlank\ifsol
+    This expression is well-typed if there are types \code{T} and \code{T'} such that \code{e1} is a well-typed expression of type \code{T -> T'} and \code{e2} is a well-typed expression of type \code{T}. If so, then the whole expression, \code{e1 e2}, will have type \code{T'}.
+\fi\enBlank
+
+\end{document}
