@@ -42,7 +42,6 @@ struct
   fun Not L = not o L
   fun Xor (L1,L2) s = (L1 s) <> (L2 s)
 
-
   fun lengthEqual n s = (List.length s)=n
   fun lengthLess n s = (List.length s)<n
   fun lengthGreater n s = (List.length s)>n
