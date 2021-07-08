@@ -6,6 +6,7 @@ sig
 
   val everything : 'S language
   val nothing : 'S language
+  val singleton : ''S list -> ''S language
   val just : ''S list list -> ''S language
 
   val Or 
@@ -21,9 +22,6 @@ sig
   val lengthLess : int -> 'S language
   val lengthGreater : int -> 'S language
 
-  val Sub : ''S list -> ''S language
-  val Sup : ''S list -> ''S language
-
   val str : char language -> string -> bool 
 end
 
@@ -35,6 +33,7 @@ struct
   fun everything (x:'S list) = true
   fun nothing (x : 'S list) = false
 
+  val singleton = Fn.equal
   fun just ([] : ''S list list) s = false
     | just (x::xs) s = (s=x) orelse just xs s
 
@@ -47,20 +46,6 @@ struct
   fun lengthEqual n s = (List.length s)=n
   fun lengthLess n s = (List.length s)<n
   fun lengthGreater n s = (List.length s)>n
-
-
-  fun isPrefix [] _ = true
-    | isPrefix _ [] = false
-    | isPrefix (c::cs) (c'::cs') =
-            (c=c') andalso (isPrefix cs cs')
-  fun isSubList [] _ = true
-    | isSubList _ [] = false
-    | isSubList sub (c::cs) = 
-        (isPrefix sub (c::cs)) 
-        orelse (isSubList sub cs)
-
-  fun Sub s0 s = isSubList s s0
-  fun Sup s0 s = isSubList s0 s
 
   fun str L = L o String.explode
 

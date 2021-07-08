@@ -1,0 +1,266 @@
+% Jacob Neumann
+
+% DOCUMENT CLASS AND PACKAGE USE
+\documentclass[12pt]{article}
+    \usepackage{spec}
+
+    \definecolor{mainColor}{HTML}{be3f81}
+    \definecolor{auxColor}{HTML}{662245}
+    \definecolor{brightColor}{HTML}{ffe0e0}
+
+\title{Language Module}
+\date{July 2021}
+
+\author{Jacob Neumann}
+
+\graphicspath{{../img/}}
+
+\begin{document}
+
+\maketitle
+
+\tableofcontents
+
+\clearpage
+
+\newcommand{\Vals}{\textsf{Values}}
+
+\section{Decision Problems}
+
+\begin{definition}[Set of values]
+    For any type \code{t}, write $\Vals(\code t)$ to denote the set of all values of type \code{t} (up to extensional equivalence).
+\end{definition}
+\begin{example}
+    \begin{itemize}
+        \item $\Vals(\code{bool}) = \set{\code{true}, \code{false}}$
+        \item $\Vals(\code{bool -> bool}) = \set{\code{not}, \code{Fn.id}, \code{(fn _ => true)}, \code{(fn _ => false)}}$
+    \end{itemize}
+\end{example}
+\begin{definition}
+    A \keyword{decision problem} of type \code{t} is a subset 
+        \[ L \sub \Vals(\code t) \]
+\end{definition}
+\begin{definition}\label{defn:computes}
+    A decision problem $L\sub\Vals(\code t)$ is said to be \keyword{decidable} if there is a \textbf{total} value \code{D : t -> bool} such that 
+                \[ \code{D(v)}\stepsTo\code{true} \qtq{iff} \code{v}\in L \]
+            for all values \code{v:t}. In this case, we say that \code{D} \keyword{decides} (or \keyword{computes}) $L$
+\end{definition}
+\begin{example}
+    The \textit{subset sum problem} is a family of decision problems of type \code{int list}, one for each value \code{n : int}
+    \[ \textsf{SUBSETSUM}_{\code n} = \compSet{\code{l}\in\Vals(\code{int list})}{\code{foldr op+ 0 l}\eeq \code{n}} \]
+    For each \code{n}, the problem $\textsf{SUBSETSUM}_{\code n}$ is decidable: we can define a total function
+    \[ \code{subsetSum n : int list -> bool} \]
+    such that $\code{subsetSum n l}\stepsTo\code{true}$ iff $\code{foldr op+ 0 l}\eeq\code{n}$.
+\end{example}
+
+\begin{definition}\label{defn:language}
+    Given a total function \code{D : t -> bool}, define the \keyword{language} of \code{D} to be the set
+    \[ \mc L(\code{D}) = \compSet{\code v\in\Vals(\code t)}{\code{D(v)}\stepsTo\code{true}}. \]
+\end{definition}
+
+
+\begin{definition}
+    An \keyword{equality type} is any type \code{t} such that
+    \[ \code{ (op =) : t * t -> bool } \]
+    is well-typed, i.e. any type whose values we can compare with the \code{=} and \code{<>} operators.
+\end{definition}
+
+\begin{definition}
+    Given an equality type \code{Sigma}, a \keyword{decision problem over the alphabet \code{Sigma}} is a subset
+        \[ L \sub \Vals(\code{Sigma list}). \]
+\end{definition}
+
+\section{Specification}
+
+\begin{note}
+    Throughout, \code{Sigma} will denote some equality type, the type of our ``alphabet''. Though some of our results will hold when \code{Sigma} is allowed to be a general polymorphic type (e.g. \autoref{lemma:boolAlg}), we are mainly concerned with situations where \code{Sigma} is an equality type (and the values \code{singleton} and \code{just} demand that \code{Sigma} be an equality type).
+    
+    A paradigm example is to take
+    \begin{codeblock}
+    type Sigma = char
+    \end{codeblock}
+
+    
+\end{note}
+
+\begin{lemma}
+    For any total function \code{D : Sigma list -> bool} and any subset $L\sub\Vals(\code{Sigma list})$, the following are equivalent:
+    \begin{enumerate}
+        \item[(1)] \code{D} computes $L$ (\autoref{defn:computes})
+        \item[(2)] For \textit{all} values \code{v : Sigma list},
+            \[ \code{D(v)} \quad\stepsTo\quad \begin{cases}
+                                                    \code{true} &\text{ if }\code{v}\in L\\
+                                                    \code{false} &\text{ if }\code v\not\in L
+                                              \end{cases}
+            \]
+        \item $\mc L(\code D) = L$ (\autoref{defn:language})
+    \end{enumerate}
+\end{lemma}
+%\begin{note}
+%    A total function \code{f : t -> bool} decides $L$ iff $\mc L(\code f)=L$.
+%\end{note}
+\TypeSpec{'S language = 'S list -> bool}{}{}
+
+\spec{everything}{'S language}{}{\code{everything : Sigma language} is a total function computing the decision problem $\Vals(\code{Sigma list})$ over the alphabet \code{Sigma}.}
+\spec{nothing}{'S language}{}{\code{nothing : Sigma language} is a total function computing the decision problem $\emptyset$.}
+\spec{singleton}{''S list -> ''S language}{}{\code{(singleton v): Sigma language} is a total function computing the decision problem $\set{\code v}$}
+\spec{just}{''S list list -> ''S language}{}{$\code{(just [v}_1,\code{v}_2,\ldots,\code{v}_n\code{]): Sigma language}$ is a total function computing the decision problem $\set{\code v_1,\code v_2,\ldots,\code v_n}$}
+
+\spec{Or}{'S language * 'S language -> 'S language}{\code{L1} and \code{L2} are total}{\code{Or(L1,L2)} is a total function such that
+    \[ \mc L(\code{Or(L1,L2)}) = \mc L(\code{L1}) \cup \mc L(\code{L2}) \]
+}
+\spec{And}{'S language * 'S language -> 'S language}{\code{L1} and \code{L2} are total}{\code{And(L1,L2)} is a total function such that
+    \[ \mc L(\code{And(L1,L2)}) = \mc L(\code{L1}) \cap \mc L(\code{L2}) \]
+}
+\spec{Not}{'S language -> 'S language}{\code{L} is total}{For any \code{L : Sigma language}, \code{Not(L)} is a total function such that
+    \[ \mc L(\code{Not(L)}) = \Vals(\code{Sigma list}) \setminus \mc L(\code{L}) \]
+}
+\spec{Xor}{'S language * 'S language -> 'S language}{\code{L1} and \code{L2} are total}{\code{Xor(L1,L2)} is a total function such that
+    \[ \mc L(\code{Xor(L1,L2)}) = \mc L(\code{Or(L1,L2)}) \setminus \mc L(\code{And(L1,L2)}) \]
+}
+
+\spec{lengthEqual}{int -> 'S language}{$\code{n}\geq\code0$}{\code{lengthEqual n} is a total function such that
+    \begin{align*}
+        & \mc L(\code{lengthEqual n}) \\
+        & = \compSet{\code{s}\in\Vals(\code{Sigma list})}{\code{((List.length s)=n)}\stepsTo\code{true}}
+    \end{align*}
+}
+\spec{lengthLess}{int -> 'S language}{$\code{n}\geq\code0$}{\code{lengthLess n} is a total function such that
+    \begin{align*} 
+        & \mc L(\code{lengthLess n}) \\
+        &= \compSet{\code{s}\in\Vals(\code{Sigma list})}{\code{((List.length s)<n)}\stepsTo\code{true}} 
+    \end{align*}
+}
+\spec{lengthGreater}{int -> 'S language}{$\code{n}\geq\code0$}{\code{lengthGreater n} is a total function such that
+    \begin{align*}
+        &\mc L(\code{lengthGreater n}) \\
+        &= \compSet{\code{s}\in\Vals(\code{Sigma list})}{\code{((List.length s)>n)}\stepsTo\code{true}}
+    \end{align*}
+}
+
+\section{Lemmas}
+Throughout, \code{L,L1,L2,L3 : Sigma language} are total.
+
+\begin{proposition}[Totality] \label{prop:totality}
+    All values of the \code{Sigma language} type produced using the \code{Language} module methods are total:
+    \begin{itemize}
+        \item \code{everything} is total
+        \item \code{nothing} is total
+        \item For any value \code{v : Sigma list}, \code{(singleton v)} is total
+        \item For any value \code{l : Sigma list list}, \code{(just l)} is total
+        \item All the curried higher-order functions (\code{singleton}, \code{just}, \code{Or}, \code{And}, \code{Not}, \code{Xor}, \code{lengthEqual}, \code{lengthLess}, \code{lengthGreater}, and \code{str}) are all \textit{total} in the trivial sense: upon being supplied one argument, they evaluate to a value (a function expecting the next curried argument)
+        \item If \code{L1,L2 : Sigma language} are total,
+            \begin{itemize}
+                \item \code{Or(L1,L2)} is total
+                \item \code{And(L1,L2)} is total
+                \item \code{Not(L1)} is total
+                \item \code{Xor(L1,L2)} is total
+            \end{itemize}
+        \item For any $\code{n}\geq\code 0$, 
+            \begin{itemize}
+                \item \code{lengthEqual n} is total
+                \item \code{lengthLess n} is total
+                \item \code{lengthGreater n} is total
+            \end{itemize}
+        \item If \code{L : char language} is total, so too is \code{str L}
+    \end{itemize}
+\end{proposition}
+\begin{proof}
+    We prove several paradigmatic cases, and the others can be done similarly.
+
+    Recall \code{just} is implemented as
+    \auxLibIndent{Language.sml}{37}{38}{-20pt}
+    So we can prove the totality of \code{(just l)} by structural induction on \code{l : Sigma list list}. The base case is immediate: for any value \code{s : Sigma list}, $\code{just [] s}\stepsTo\code{false}$, a value. Inductively assuming \code{just xs s} valuable, then we can see that \code{(just (x::xs) s)} is also valuable, since \code{(s=x)} is valuable and, if \code{(s=x)} evaluates to \code{false}, then 
+        \[ \code{just (x::xs) s} \quad\stepsTo\quad \code{just xs s} \]
+    which our IH tells us is valuable, completing the proof.
+
+
+    Recall \code{And} is implemented as
+    \auxLibIndent{Language.sml}{41}{41}{-20pt}
+    so if \code{L1} and \code{L2} are total, then \code{(L1 s)} and \code{(L2 s)} are valuable, hence \code{(L1 s) andalso (L2 s)} is valuable, proving \code{And(L1,L2)} total.
+
+    Taking for granted that \code{List.length} is total, it follows that the expression \code{(List.length s)=n} is valuable. Since this is the body of \code{lengthEqual n s}, we get that \code{lengthEqual n} is total.
+
+    Proving the totality of \code{str L} from the totality of \code{L} is a straightforward consequence of the totality of \code{String.explode}.
+\end{proof}
+\begin{lemma}
+    \[ \code{just} \qeq \code{(foldr Or nothing) o (map singleton)} \]
+\end{lemma}
+\begin{proof} 
+    It suffices to show that for all values \code{l : Sigma list list},
+    \[ \code{just l} \qeq \code{foldr Or nothing (map singleton l)} \]
+    which we do by structural induction on \code{l}.
+
+    \bcBox \code{l = []}. Pick arbitrary \code{s : Sigma list}. Then
+        \begin{align*}
+                &\code{just [] s}\\
+                &\qeq \code{false} \tag{Defn. \code{just}}\\
+                &\qeq \code{nothing s} \tag{Defn. \code{nothing}}\\
+                &\qeq \code{(foldr Or nothing []) s} \tag{Defn. \code{foldr}}\\
+                &\qeq \code{(foldr Or nothing (map singleton [])) s} \tag{Defn. \code{map}}
+        \end{align*}
+        Establishing that $\code{just []}\eeq\code{foldr Or nothing (map singleton [])}$.
+
+    \ihBox Suppose for some \code{xs : Sigma list list} that
+    \[ \code{just xs} \qeq \code{foldr Or nothing (map singleton xs)} \]
+    Now pick some \code{x : Sigma list}. We'll show that
+    \[ \code{just (x::xs)} \qeq \code{foldr Or nothing (map singleton (x::xs))} \]
+    Pick arbitrary \code{s : Sigma list}.
+    \begin{align*}
+        &\code{just (x::xs) s}\\
+        &\eeq \code{(s=x) orelse just xs s} \tag{Defn. \code{just}}\\
+        &\eeq \code{(x=s) orelse just xs s} \tag{Symmetry of \code=}\\
+        &\eeq \code{(Fn.equal x s) orelse just xs s} \tag{Defn. \code{Fn.equal}}\\
+        &\eeq \code{(singleton x s) orelse just xs s} \tag{Defn. \code{singleton}}\\
+        &\eeq \code{(singleton x s) orelse (foldr Or nothing (map singleton xs)) s} \tag*{\refIH}\\
+        &\eeq \code{Or(singleton x, (foldr Or nothing (map singleton xs))) s} \tag{Defn. \code{Or}, \autoref{prop:totality}, higher-order totality of \code{map} and \code{foldr}}\\
+        &\eeq \code{(foldr Or nothing ((singleton x)::(map singleton xs))) s} \tag{Defn. \code{foldr}, \autoref{prop:totality}, higher-order totality of \code{map}}\\
+        &\eeq \code{(foldr Or nothing (map singleton (x::xs))) s} \tag{Defn. \code{map}}
+    \end{align*}
+    so we're done.
+\end{proof}
+\begin{corollary}
+    \[ \code{nothing} \qeq \code{just []} \]
+\end{corollary}
+
+\begin{lemma} \label{lemma:boolAlg}
+For any total \code{L,L1,L2,L3 : Sigma language}, the following equivalences hold
+    \begin{itemize}
+        \item $\code{And(L1,And(L2,L3))} \qeq \code{And(And(L1,L2),L3)}$
+        \item $\code{And(L1,L2)} \qeq \code{And(L2,L1)}$
+        \item $\code{Or(L1,Or(L2,L3))} \qeq \code{Or(Or(L1,L2),L3)}$
+        \item $\code{Or(L1,L2)} \qeq \code{Or(L2,L1)}$
+        \item $\code{And(L,everything)} \qeq \code{L} \qeq \code{And(everything,L)}$
+        \item $\code{Or(L,nothing)} \qeq \code{L} \qeq \code{Or(nothing,L)}$
+        \item $\code{Not(Not(L))} \qeq \code{L}$
+        \item $\code{Or(L1,And(L1,L2))} \qeq \code{L1} \qeq \code{And(L1,Or(L1,L2))}$
+        \item $\code{Or(L1,And(L2,L3))} \qeq \code{And(Or(L1,L2),Or(L1,L3)))}$\\
+              $\code{And(L1,Or(L2,L3))} \qeq \code{Or(And(L1,L2),And(L1,L3)))}$
+        \item $\code{And(L,Not L)} \qeq \code{nothing}$\\
+              $\code{Or(L,Not L)} \qeq \code{everything}$
+    \end{itemize}
+\end{lemma}
+
+\begin{lemma} 
+    For all values $\code{n}\geq\code 0$,
+    \[ \code{Not(lengthGreater n)} \qeq \code{Or(lengthEqual n,lengthLess n)} \]
+\end{lemma}
+\begin{proof}
+    Pick arbitrary \code{s : Sigma list}, and let \code{m} denote the value of \code{List.length s}.
+    \begin{align*}
+        &\code{(Not(lengthGreater n)) s}\\
+        &\eeq \code{not(lengthGreater n s)} \tag{Defn. \code{Not}, \autoref{prop:totality}}\\
+        &\eeq \code{not((List.length s)>n} \tag{Defn. \code{lengthGreater}}\\
+        &\eeq \code{not (m>n)} \tag{Defn. \code{m}}\\
+        &\eeq \code{m=n orelse m<n} \tag{math}\\
+        &\eeq \code{((List.length s)=n) orelse ((List.length s)<n)} \tag{Defn. \code{m}}\\
+        &\eeq \code{(lengthEqual n s) orelse (lengthLess n s)} \tag{Defn. \code{lengthEqual} and \code{lengthLess}}\\
+        &\eeq \code{(Or(lengthEqual n, lengthLess n)) s} \tag{Defn. \code{Or}, \autoref{prop:totality}}
+    \end{align*}
+    as desired.
+\end{proof}
+This proof can be modified to prove similar equivalences, e.g.
+    \[ \code{Not(lengthLess n)} \qeq \code{Or(lengthEqual n,lengthGreater n)}. \]
+
+\end{document}
+
