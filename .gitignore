@@ -1,0 +1,15 @@
+.DS_Store
+.cm
+*.synctex.gz
+*.log
+*.aux
+*.out
+*.sta
+*.toc
+*.swp
+*.swo
+*.fdb_latexmk
+*.fls
+*.__afs*
+__pycache__/
+tex/*.pdf
