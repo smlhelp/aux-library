@@ -37,12 +37,12 @@ struct
   fun depth Zero = 0
     | depth One = 0
     | depth (Const(_)) = 0
-    | depth (Plus(r1,r2)) = 
-        1 + Int.max(depth r1,depth r2)
-    | depth (Times(r1,r2)) = 
-        1 + Int.max(depth r1,depth r2)
-    | depth (Star(r)) = 
-        1 + depth r
+    | depth (Plus(R1,R2)) = 
+        1 + Int.max(depth R1,depth R2)
+    | depth (Times(R1,R2)) = 
+        1 + Int.max(depth R1,depth R2)
+    | depth (Star(R)) = 
+        1 + depth R
   
   exception NoMatch
  
@@ -60,18 +60,18 @@ struct
         match R1 cs (fn (res',cs') => 
           match R2 cs' (fn (res'',cs'') =>
             k (res'@res'',cs'')))
-    | match (Star(r)) cs k =
+    | match (Star(R)) cs k =
         k([],cs) 
           handle NoMatch => 
-            match r cs (fn (res',cs') => 
+            match R cs (fn (res',cs') => 
               if (cs = cs') 
               then raise NoMatch
               else 
-                match (Star(r)) cs' (fn (res'',cs'') => 
+                match (Star(R)) cs' (fn (res'',cs'') => 
                   k(res'@res'',cs'')))
 
-  val LL = fn r => fn s => 
-    match r s (fn (_,[]) => true | _ => raise NoMatch)
+  val LL = fn R => fn s => 
+    match R s (fn (_,[]) => true | _ => raise NoMatch)
     handle NoMatch => false
 
   fun reduce Zero = Zero
@@ -97,7 +97,7 @@ struct
 
   (* REQURES: R contains no instances of Zero *)
   fun represent toStr Zero = raise Fail "Cannot represent Zero"
-    | represent toStr One = "\^[[32m(.{0,0})\^[[0m"
+    | represent toStr One = "(.{0,0})"
     | represent toStr (Const c) = (toStr c)
     | represent toStr (Plus(R1,R2)) =
         "(" ^ (represent toStr R1) ^ "|" ^ (represent toStr R2) ^ ")"

@@ -3,48 +3,296 @@
 % DOCUMENT CLASS AND PACKAGE USE
 \documentclass[12pt]{article}
     \usepackage{spec}
-
     \definecolor{auxColor}{HTML}{804020}
     \definecolor{mainColor}{HTML}{e48020}
     \definecolor{brightColor}{HTML}{ffefe0}
 
-\title{Regular Expressions -- Specification and Correctness Proof}
+\title{Regexp Module}
 \author{Jacob Neumann}
-\date{\today}
+\date{July 2021}
 
 \graphicspath{{../img/}}
 
+\newcommand{\Vals}{\textsf{Values}}
 \begin{document}
 
 \maketitle
 
-\section{Specifications}
-\auxLib{Regexp.sml}{3}{22}
+\tableofcontents
 
+\clearpage
+
+\begin{note}
+    Throughout, \code{Sigma} is assumed to be some equality type.
+\end{note}
+\begin{note}
+    This document assumes the definitions and declarations of \url{https://github.com/smlhelp/aux-library/blob/main/documentation/language.pdf}, and assumes that the \code{Language} structure has been opened.
+\end{note}
+In particular, we have
+\begin{definition}
+    \auxLib{Language.sml}{31}{31}
+
+    A total function \code{D : Sigma list -> bool} is said to \keyword{compute} a set $L$ of values of type \code{Sigma list} if 
+        \[ \code{D cs}\stepsTo\code{true} \qtq{iff} \code{cs}\in L \]
+    i.e. we can run \code{D} on any value \code{cs : Sigma list} and get back either \code{true} or \code{false}, which correctly indicates that either $\code{cs}\in L$ or $\code{cs}\not\in L$, respectively. 
+\end{definition}
+
+
+\clearpage
+\section{Preliminary Declarations \& Main Definitions}
+\begin{declaration}
+    \auxLib{Regexp.sml}{29}{35}
+\end{declaration}
+
+\begin{definition}[Language]
+    Given a value \code{R : Sigma regexp}, define the \keyword{language of \code R} to be the set of values $\mc L(\code R)\sub \Vals(\code{Sigma list})$ given recursively by:
 \begin{alignat*}{2}
-    &\mc L(\code{Const(c)}) \quad &&= \quad \set{\code{[c]}}\\ 
     &\mc L(\code{Zero}) \quad &&= \quad \emptyset\\ 
     &\mc L(\code{One}) \quad &&= \quad \set{\code{[]}}\\ 
-    &\mc L(\code{Times(r1,r2)}) \quad &&= \quad \compSet{\code{s1@s2}}{\code{s1}\in\mc L(\code{r1})\text{ and }\code{s2}\in\mc L(\code{r2})}\\ 
+    &\mc L(\code{Const(c)}) \quad &&= \quad \set{\code{[c]}}\\ 
     &\mc L(\code{Plus(r1,r2)}) \quad &&= \quad \mc L(\code{r1})\cup \mc L(\code{r2})\\ 
-    &\mc L(\code{Star(r)}) \quad &&= \quad \compSet{\code{s1 @ s2 @ ... @ sn}}{n\in\N,\ \code{s1,s2,..., sn}\in\mc L(r)}
+    &\mc L(\code{Times(r1,r2)}) \quad &&= \quad \compSet{\code v_1\code{@v}_2}{\code v_1\in\mc L(\code{r1})\text{ and }\code v_2\in\mc L(\code{r2})}\\ 
+    &\mc L(\code{Star(r)}) \quad &&= \quad \compSet{\code v_1\code{@v}_2\code{@ ... @v}_n}{n\in\N,\ \code v_1,\code v_2,\ldots,\code v_n\in\mc L(\code r)}
 \end{alignat*}
+\end{definition}
 
-\auxBox{Defn.} For any type \code{t}, a pair \code{(p,s) : t list * t list} is said to be a \keyword{splitting} of \code{L : t list} if
-    \[ \code{L} \eeq \code{p @ s}. \]
+\begin{definition}
+    A total function \code{D : Sigma regexp -> Sigma language} is said to \keyword{compute the regular expression decision problem} (over the alphabet \code{Sigma}) if
+        \[ \code{D R cs}\stepsTo\code{true} \qtq{if and only if} \code{cs}\in\mc L(\code R) \]
+    for all \code{R : Sigma regexp} and all \code{cs : Sigma list}.
+\end{definition}
+
+\begin{definition}
+    A pair \code{(p,s) : Sigma list * Sigma list} is said to be a \keyword{splitting} of \code{cs : Sigma list} if
+    \[ \code{cs} \eeq \code{p @ s}. \]
     In such a splitting, \code{p} is called the \keyword{prefix} and \code{s} the \keyword{suffix}.
+\end{definition}
+
+\begin{declaration}
+    \auxLib{Regexp.sml}{47}{47}
+\end{declaration}
+
+\begin{definition}\label{defn:almost-total}
+    For any type \code{t}, we'll say that a function 
+        \[ \code{k : Sigma list * Sigma list -> t} \]
+    is \keyword{almost total} if, for all \code{(p,s) : Sigma list * Sigma list}, either
+        \[ \code{k(p,s)}\evalsTo\code{v}\text{ for some value \code{v} \quad\quad or \quad\quad} \code{k(p,s)}\text{ raises }\code{NoMatch}. \]
+
+    If $\code{k(p,s)}\evalsTo\code{v}$, then we say that  \keyword{\code{k} accepts \code{(p,s)} with result \code{v}}.
+\end{definition}
+\clearpage
+\section{Matching Specification}
+
+\begin{declaration}[Depth]
+    Define the \keyword{depth} of \code{R : Sigma regexp} recursively by
+    \auxLibIndent{Regexp.sml}{37}{45}{-20pt}
+\end{declaration}
 
 \Spec{match}{%
-    \code{''a regexp -> ''a list}\\
-    &\quad\quad\code{ -> (''a list * ''a list -> 'b) -> 'b}}
-{for all \code{(p,s)}, \code{k(p,s)} either reduces to a value or raises \code{NoMatch}}
+    \code{''a regexp}\\
+    &\quad\quad\code{-> ''a list}\\
+    &\quad\quad\code{ -> (''a list * ''a list -> 'b)}\\
+    &\quad\quad\code{-> 'b}}
+{\code{k} is almost total (\autoref{defn:almost-total})}
 {    \[ \code{match r cs k} \eeq \begin{cases}
-    \code{k(p,s)} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code r)$ and \code{k(p,s)} reduces to a value}\\
+    \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code r)$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
                                     \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
                                 \end{cases}
     \]
 }
 
+\spec{LL}{''S regexp -> ''S language}{}{\code{LL} computes the regular expression decision problem: for all \code{R : Sigma regexp}, \code{(LL R) : Sigma list -> bool} is a total function such that
+    \[ \code{LL R cs}\stepsTo\code{true} \qtq{iff} \code{cs}\in\mc L(\code R) \]} 
+
+\clearpage
+\section{Matching Implementation}
+\auxLib{Regexp.sml}{29}{47}
+\clearpage
+\auxLib{Regexp.sml}{49}{75}
+\clearpage
+
+
+\section{\texttt{Zero}, \texttt{One}, \texttt{Const} Correctness}
+
+\begin{lemma}\label{lemma:zero-correct}
+    For any almost total \code{k} and any \code{cs : Sigma list},
+\[ \code{match Zero cs k} \eeq \begin{cases}
+    \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{Zero})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    Since $\mc L(\code{Zero})=\emptyset$, there cannot be any splitting of any \code{cs} whose prefix is in $\mc L(\code{Zero})$. Therefore, this spec says that \code{match Zero cs k} always ought to raise \code{NoMatch}, which it does. \specSat
+\end{proof}
+\begin{corollary}\label{cor:zero-almost-total}
+    For any almost total \code{k}, \code{(fn cs => match Zero cs k)} is almost total.
+\end{corollary}
+
+\begin{lemma}\label{lemma:one-correct}
+    For any almost total \code{k} and any \code{cs : Sigma list},
+\[ \code{match One cs k} \eeq \begin{cases}
+    \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{One})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    Since $\mc L(\code{One})=\set{\code{[]}}$, the only splitting of \code{cs} which we need to consider is \code{([],cs)}. But notice that
+        \[ \code{k([],cs)} \qeq \begin{cases}
+                                    \code{v} &\text{if \code{k} accepts \code{([],cs)} with result \code{v}}\\
+                                    \code{raise NoMatch} &\text{if \code{k} rejects \code{([],cs)}}
+                                \end{cases}
+        \]
+    so we have \specSat by putting \code{match One cs k = k([],cs)}.
+\end{proof}
+\begin{corollary}\label{cor:one-almost-total}
+    For any almost total \code{k}, \code{(fn cs => match One cs k)} is almost total.
+\end{corollary}
+
+
+\begin{lemma}\label{lemma:const-correct}
+    For any almost total \code{k}, any \code{cs : Sigma list}, and any value \code{c : Sigma}
+    \[ \code{match (Const c) cs k} \eeq \begin{cases}
+    \code{v} & \parbox[t]{.35\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{Const c})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+\begin{proof}
+    Begin by recalling that $\mc L(\code{Const c}) = \set{\code{[c]}}$. 
+    Break into two cases: \code{cs=[]} and \code{cs=c'::cs'}.
+
+    If \code{cs=[]}, then there is no prefix of \code{cs} in $\mc L(\code{Const c})$, so \code{match (Const c) [] k} should raise \code{NoMatch}. \specSat
+
+    If \code{cs=c'::cs'}, then break into two further cases: either \code{c=c'} or \code{c<>c'}. In the latter case, there is no prefix of \code{cs} in $\mc L(\code{Const c})$, so again \code{NoMatch} should be raised. \specSat However, if \code{c=c'}, then $\code{[c']}\in \mc L(\code{Const c})$, so whatever behavior \code{k([c'],cs')} has is what behavior \code{match (Const c) cs k} should have. \specSat
+\end{proof}
+\begin{corollary}\label{cor:const-almost-total}
+    For any almost total \code{k} and any value \code{c:Sigma}, \code{(fn cs => match (Const c) cs k)} is almost total.
+\end{corollary}
+%\[ \code{match r cs k} \eeq \begin{cases}
+%    \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code r)$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+%                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+%                                \end{cases}
+%    \]
+
+
+\section{\texttt{Plus} Correctness}
+\inductive{For some \code{R1,R2 : Sigma regexp},
+      \[ \code{match R1 cs k} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{R1})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]     
+      \[ \code{match R2 cs k} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{R2})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+    for all values \code{cs : Sigma list} and all almost total \code{k}.
+
+    In particular: if \code{k} is almost total, then so too are \code{(fn cs => match R1 cs k)} and \code{(fn cs => match R2 cs k)}.
+    }
+
+\begin{lemma}\label{lemma:plus-correct}
+    For any almost total \code{k}, any \code{cs : Sigma list},
+    \[ \code{match (Plus(R1,R2)) cs k} \eeq \begin{cases}
+        \code{v} & \parbox[t]{.3\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{Plus(R1,R2)})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+%\begin{proof}
+
+%\end{proof}
+\begin{corollary}\label{cor:plus-almost-total}
+    For any almost total \code{k}, \code{(fn cs => match (Plus(R1,R2)) cs k)} is almost total.
+\end{corollary}
+
+\section{\texttt{Times} Correctness}
+\inductive{For some \code{R1,R2 : Sigma regexp},
+      \[ \code{match R1 cs k} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{R1})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]     
+      \[ \code{match R2 cs k} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{R2})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+    for all values \code{cs : Sigma list} and all almost total \code{k}.
+
+    In particular: if \code{k} is almost total, then so too are \code{(fn cs => match R1 cs k)} and \code{(fn cs => match R2 cs k)}.
+    }
+
+\begin{lemma}\label{lemma:times-correct}
+    For any almost total \code{k}, any \code{cs : Sigma list},
+    \[ \code{match (Times(R1,R2)) cs k} \eeq \begin{cases}
+        \code{v} & \parbox[t]{.3\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{Times(R1,R2)})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+%\begin{proof}
+
+%\end{proof}
+\begin{corollary}\label{cor:times-almost-total}
+    For any almost total \code{k}, \code{(fn cs => match (Times(R1,R2)) cs k)} is almost total.
+\end{corollary}
+
+\section{\texttt{Star} Correctness}
+\inductive{For some \code{R : Sigma regexp} and some \code{cs : Sigma list}
+      \[ \code{match R cs g} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{R})$ and \code{g} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]     
+      \[ \code{match (Star(R)) cs' g} \eeq \begin{cases}
+          \code{v} & \parbox[t]{.43\textwidth}{where \code{(p,s)} is a splitting of \code{cs'} such that $\code p\in\mc L(\code{Star(R)})$ and \code{g} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+    for all values \code{cs' : Sigma list} \textit{of length less than \code{cs}}, and all almost total \code{g}.
+
+    In particular: if \code{g} is almost total, then so too is \code{(fn cs => match R cs g)}. And if \code{g} is almost total, \code{match (Star(R)) cs' g} for \code{cs'} of length less than \code{cs}.
+    }
+
+\begin{lemma}\label{lemma:star-correct}
+    For any almost total \code{k},
+    \[ \code{match (Star(R)) cs k} \eeq \begin{cases}
+        \code{v} & \parbox[t]{.3\textwidth}{where \code{(p,s)} is a splitting of \code{cs} such that $\code p\in\mc L(\code{Star(R)})$ and \code{k} accepts \code{(p,s)} with result \code v.}\\
+                                    \code{raise NoMatch} & \text{if there is no such \code{(p,s)}}
+                                \end{cases}
+    \]
+\end{lemma}
+%\begin{proof}
+
+%\end{proof}
+\begin{corollary}\label{cor:star-almost-total}
+    For any almost total \code{k}, \code{(fn cs => match (Star(R)) cs k)} is almost total.
+\end{corollary}
+
+
+\section{\texttt{match} and \texttt{LL} Correctness}
+
+\section{Reduction, Representation, and Printing Specification}
+\spec{represent}{(''S -> string) -> ''S regexp -> string}{\code{toStr} is total, \code{R} is non-\code{Zero}}{\code{represent toStr R} converts the regular expression \code{R} into POSIX-like regular expression syntax, using \code{toStr} to convert \code{Sigma} values into strings. This uses the convention of representing \code{One} as \texttt{(.\{0,0\})}}
+
+\begin{definition}
+    A value \code{R : Sigma regexp} is said to be \keyword{\code{Zero}-reduced} if either:
+    \begin{itemize}
+        \item \code{R = Zero}
+        \item \code{R} does not contain any \code{Zero}s
+    \end{itemize}
+\end{definition}
+
+\spec{reduce}{''S regexp -> ''s regexp}{}{$\code{(reduce R)}\stepsTo\code{R'}$ such that $\mc L(\code R)=\mc L(\code{R'})$ and \code{R'} is \code{Zero}-reduced (and also \code{R'} may have some superfluous \code{One}s removed)}
+
+\specEffect{printRep}{(''S -> string) -> ''S regexp -> unit}{\code{toStr} is total, $\code{(reduce R)}\not\stepsTo\code{Zero}$}{$\code{printRep toStr R}\stepsTo\code{()}$}{Prints the value of \code{(represent toStr (reduce R))} into the REPL.}
+
+
+\end{document}
 \section{(Almost) Totality}
 \auxBox{Prop.}  For any equality type \code{T}, any type \code{t}, any value \code{r : T regexp}, any value \code{cs : T list}, and any value \code{k : T list * T list -> t} satisfying the REQUIRES clause for \code{match}, either
     \[ \code{match r cs k}\evalsTo\code{v}\text{ for some }\code v \qtq{or} \code{match r cs k}\text{ raises }\code{NoMatch} \]

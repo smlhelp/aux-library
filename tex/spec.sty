@@ -36,7 +36,7 @@
 
 \makeatletter
 \lhead{\fancyplain{}{\color{mainColor} \@title}}
-\rhead{\fancyplain{}{\thesection}}
+\rhead{\fancyplain{}{\href{https://smlhelp.github.io/book/}{\texttt{smlhelp.github.io}} -- \href{https://github.com/smlhelp/aux-library}{Auxiliary Library}}}
 \chead{\fancyplain{}{}}
 \makeatother
 
@@ -129,6 +129,21 @@
         \ifstrempty{#6}{}{\par\noindent {\bfseries\color{mainColor}SPAN:} #6}
     \end{mdframed}
 }
+\newrobustcmd{\specEffect}[5]{
+    \begin{mdframed}[backgroundcolor=brightColor,
+        linecolor=mainColor,
+        innertopmargin=0pt,
+        linewidth=4pt,
+        topline=false,
+        rightline=false,
+        bottomline=false]
+         \hspace{-14pt}\mainBox{\bfseries\strut \;Value Spec\;}
+    \par\noindent\code{#1 : #2}
+        \ifstrempty{#3}{}{\par\noindent {\bfseries\color{mainColor}REQUIRES:} #3}
+        \ifstrempty{#4}{}{\par\noindent {\bfseries\color{mainColor}ENSURES:} #4}
+        \ifstrempty{#5}{}{\par\noindent {\bfseries\color{mainColor}EFFECT:} #5}
+    \end{mdframed}
+}
 \newrobustcmd{\Spec}[4]{
     \begin{mdframed}[backgroundcolor=brightColor,
          linecolor=mainColor,
@@ -160,6 +175,19 @@
     \end{mdframed}
 }
 
+\newrobustcmd{\inductive}[2][\thesection]{
+    \begin{mdframed}[
+         linecolor=mainColor,
+         innertopmargin=0pt,
+          linewidth=4pt,
+          topline=false,
+            rightline=false,
+         bottomline=false]
+     \hspace{-14pt}\mainBox{\bfseries\strut \;Inductive Assumption (Section #1)\;}
+
+    \noindent #2
+    \end{mdframed}
+}
 %%%%%%%%%%%%%%%%%%%%%
 %% Text Formatting %%
 %%%%%%%%%%%%%%%%%%%%%
@@ -320,7 +348,7 @@
 % Theorem referencing
 \theoremstyle{break}
 %\theoremindent20pt
-\theoremheaderfont{\normalfont\bfseries\color{white}\hspace{-14pt}\mainBox{\strut\hspace{7cm}}\vspace{0.2cm}\hspace{-7cm}}
+\theoremheaderfont{\normalfont\bfseries\color{white}\hspace{-14pt}\mainBox{\strut\hspace{7.5cm}}\vspace{0.2cm}\hspace{-7.5cm}}
 
 \theorembodyfont{\upshape}
 \newtheorem{pg}{}
@@ -332,6 +360,7 @@
 \newaliascnt{claim}{theorem}
 \newaliascnt{example}{theorem}
 \newaliascnt{definition}{theorem}
+\newaliascnt{declaration}{theorem}
 \newaliascnt{fact}{theorem}
 \newaliascnt{note}{theorem}
 
@@ -351,6 +380,8 @@
 \aliascntresetthe{fact}
 \newtheorem{note}[note]{Note}
 \aliascntresetthe{note}
+\newtheorem{declaration}[declaration]{Declaration}
+\aliascntresetthe{declaration}
 
      \surroundwithmdframed[
          linecolor=auxColor,
@@ -407,6 +438,13 @@
           linewidth=4pt,
           topline=false,
             rightline=false,
+         bottomline=false]{declaration}
+     \surroundwithmdframed[
+         linecolor=auxColor,
+         innertopmargin=-1pt,
+          linewidth=4pt,
+          topline=false,
+            rightline=false,
          bottomline=false]{fact}
      \surroundwithmdframed[
          linecolor=auxColor,
@@ -417,6 +455,7 @@
          bottomline=false]{note}
 \providecommand*{\theoremautorefname}{Thm.}
 \providecommand*{\definitionautorefname}{Defn.}
+\providecommand*{\declarationautorefname}{Declaration}
 \providecommand*{\propositionautorefname}{Prop.}
 \def\lemmaautorefname{Lemma}
 \providecommand*{\corollaryautorefname}{Cor.}
